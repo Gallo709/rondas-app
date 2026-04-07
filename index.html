@@ -38,7 +38,6 @@
     table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
     th,td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; }
     .pill { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af; }
-    .pill-ok { background:#ccfbf1; color:#115e59; }
     .scanner-box {
       border:2px dashed #93c5fd; border-radius:16px; background:#eff6ff; padding:18px; text-align:center;
     }
@@ -48,6 +47,15 @@
     .topbar {
       display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;
       margin-bottom:10px;
+    }
+    #reader {
+      width: 100%;
+      max-width: 420px;
+      margin: 16px auto 0 auto;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #000;
     }
     @media (max-width:640px) {
       .grid { grid-template-columns:1fr; }
@@ -60,7 +68,7 @@
   <div class="wrap">
     <section id="pantallaLogin" class="card">
       <h1>Acceso a rondas</h1>
-      <p class="small">Ingresa la contraseña general para usar el sistema. Esta versión ya está pensada para trabajar desde dentro de la app web.</p>
+      <p class="small">Ingresa la contraseña general para usar el sistema. Esta versión ya trabaja desde dentro de la app web.</p>
       <div class="field" style="margin-top:14px;">
         <div class="label">Contraseña general</div>
         <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
@@ -97,20 +105,18 @@
 
       <div class="card hidden" id="panelEscaner">
         <h2>Escaneo interno</h2>
-        <p class="small">Por ahora esta versión usa ingreso manual del código del QR para dejar lista la estructura del flujo. El siguiente paso será abrir la cámara dentro de la misma app.</p>
+        <p class="small">Presiona escanear y apunta la cámara al QR del punto. El QR debe contener solo el código, por ejemplo: PUNTO-001.</p>
         <div class="scanner-box">
-          <div class="label" style="margin-bottom:10px;">Código detectado o ingresado</div>
+          <div class="label" style="margin-bottom:10px;">Código detectado</div>
           <div id="codigoLeidoVista" class="scanner-code">SIN CÓDIGO</div>
-          <div class="small" style="margin-top:10px;">Ejemplos: PUNTO-001, PUNTO-002, PUNTO-003</div>
+          <div class="small" style="margin-top:10px;">Ejemplos válidos: PUNTO-001, PUNTO-002, PUNTO-003</div>
         </div>
 
-        <div class="field" style="margin-top:14px;">
-          <div class="label">Ingresar código del punto</div>
-          <input id="codigoManualInput" type="text" placeholder="Ejemplo: PUNTO-001" autocapitalize="characters" autocomplete="off">
-        </div>
+        <div id="reader"></div>
 
         <div class="actions">
-          <button id="btnUsarCodigo" class="primary">Usar código</button>
+          <button id="btnIniciarCamara" class="primary">Iniciar cámara</button>
+          <button id="btnDetenerCamara" class="secondary">Detener cámara</button>
           <button id="btnRegistrarPunto" class="secondary">Registrar punto</button>
         </div>
         <div id="mensajeEscaner"></div>
@@ -129,6 +135,8 @@
       </div>
     </section>
   </div>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -171,7 +179,6 @@
     const mensajeLogin = document.getElementById('mensajeLogin');
     const mensajeGeneral = document.getElementById('mensajeGeneral');
     const mensajeEscaner = document.getElementById('mensajeEscaner');
-    const codigoManualInput = document.getElementById('codigoManualInput');
     const codigoLeidoVista = document.getElementById('codigoLeidoVista');
     const elConexion = document.getElementById('estadoConexion');
     const elFecha = document.getElementById('fechaActual');
@@ -182,6 +189,8 @@
 
     let ultimaUbicacion = { latitud:null, longitud:null, precision:null, error:null };
     let codigoEscaneadoActual = '';
+    let html5QrCode = null;
+    let camaraActiva = false;
 
     function mostrarMensaje(el, texto, tipo = 'ok') {
       el.innerHTML = `<div class="status ${tipo}">${texto}</div>`;
@@ -269,13 +278,26 @@
       renderPendientes();
     }
 
+    async function detenerCamara() {
+      try {
+        if (html5QrCode && camaraActiva) {
+          await html5QrCode.stop();
+          await html5QrCode.clear();
+          camaraActiva = false;
+          mostrarMensaje(mensajeEscaner, 'Cámara detenida.', 'ok');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     function cerrarSesion() {
+      detenerCamara();
       localStorage.removeItem(SESSION_KEY);
       pantallaApp.classList.add('hidden');
       pantallaLogin.classList.remove('hidden');
       panelEscaner.classList.add('hidden');
       passwordInput.value = '';
-      codigoManualInput.value = '';
       codigoEscaneadoActual = '';
       codigoLeidoVista.textContent = 'SIN CÓDIGO';
       mensajeGeneral.innerHTML = '';
@@ -297,28 +319,54 @@
 
     function activarEscaner() {
       panelEscaner.classList.remove('hidden');
-      codigoManualInput.focus();
-      mostrarMensaje(mensajeEscaner, 'Ingresa el código del punto para simular el escaneo interno. Después conectamos la cámara.', 'ok');
+      mostrarMensaje(mensajeEscaner, 'Presiona iniciar cámara y apunta al QR del punto.', 'ok');
     }
 
-    function usarCodigoManual() {
-      const codigo = codigoManualInput.value.trim().toUpperCase();
-
-      if (!codigo) {
-        mostrarMensaje(mensajeEscaner, 'Debes ingresar un código de punto.', 'error');
-        return;
-      }
+    function procesarCodigoLeido(textoQr) {
+      const codigo = textoQr.trim().toUpperCase();
 
       if (!PUNTOS[codigo]) {
-        mostrarMensaje(mensajeEscaner, 'Ese código no existe en la lista de puntos.', 'error');
-        codigoLeidoVista.textContent = codigo;
         codigoEscaneadoActual = '';
+        codigoLeidoVista.textContent = codigo;
+        mostrarMensaje(mensajeEscaner, 'El QR leído no corresponde a un punto válido.', 'error');
         return;
       }
 
       codigoEscaneadoActual = codigo;
       codigoLeidoVista.textContent = `${codigo} - ${PUNTOS[codigo]}`;
-      mostrarMensaje(mensajeEscaner, 'Código cargado correctamente. Ya puedes registrar el punto.', 'ok');
+      mostrarMensaje(mensajeEscaner, 'Código leído correctamente. Ya puedes registrar el punto.', 'ok');
+    }
+
+    async function iniciarCamara() {
+      try {
+        if (camaraActiva) {
+          mostrarMensaje(mensajeEscaner, 'La cámara ya está activa.', 'warn');
+          return;
+        }
+
+        if (!window.Html5Qrcode) {
+          mostrarMensaje(mensajeEscaner, 'No se pudo cargar el lector QR.', 'error');
+          return;
+        }
+
+        html5QrCode = new Html5Qrcode('reader');
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            procesarCodigoLeido(decodedText);
+            detenerCamara();
+          },
+          () => {}
+        );
+
+        camaraActiva = true;
+        mostrarMensaje(mensajeEscaner, 'Cámara iniciada. Apunta al QR.', 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeEscaner, `No se pudo iniciar la cámara: ${e.message}`, 'error');
+      }
     }
 
     async function enviarRegistro(registro) {
@@ -347,7 +395,7 @@
       actualizarFechaHora();
 
       if (!codigoEscaneadoActual) {
-        mostrarMensaje(mensajeEscaner, 'Primero debes escanear o ingresar un código válido.', 'error');
+        mostrarMensaje(mensajeEscaner, 'Primero debes escanear un código válido.', 'error');
         return;
       }
 
@@ -435,10 +483,8 @@
 
       document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
       document.getElementById('btnEscanear').addEventListener('click', activarEscaner);
-      document.getElementById('btnUsarCodigo').addEventListener('click', usarCodigoManual);
-      codigoManualInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') usarCodigoManual();
-      });
+      document.getElementById('btnIniciarCamara').addEventListener('click', iniciarCamara);
+      document.getElementById('btnDetenerCamara').addEventListener('click', detenerCamara);
       document.getElementById('btnRegistrarPunto').addEventListener('click', registrarPuntoEscaneado);
       document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
     }
