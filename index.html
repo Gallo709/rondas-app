@@ -14,17 +14,20 @@
     * { box-sizing:border-box; }
     body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); padding:18px; }
     .wrap { max-width:760px; margin:0 auto; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 6px 22px rgba(0,0,0,.05); margin-bottom:16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.06); margin-bottom:18px; }
     h1,h2,h3 { margin-top:0; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .field { padding:12px; border:1px solid var(--border); border-radius:12px; background:#fafafa; }
+    .field { padding:14px; border:1px solid var(--border); border-radius:14px; background:#fafafa; }
     .label { font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
     .value { font-size:16px; font-weight:600; word-break:break-word; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
-    button { border:0; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:700; cursor:pointer; }
-    .primary { background:var(--primary); color:#fff; }
-    .secondary { background:#e5e7eb; color:#111827; }
-    .danger { background:#dc2626; color:#fff; }
+    button { border:0; border-radius:14px; padding:12px 16px; font-size:15px; font-weight:700; cursor:pointer; transition:transform .15s ease, opacity .15s ease; }
+    button:hover { transform:translateY(-1px); }
+    button:active { transform:translateY(0); }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .primary { background:var(--primary); color:#fff; box-shadow:0 8px 18px rgba(29,78,216,.22); }
+    .secondary { background:#eef2f7; color:#111827; }
+    .danger { background:#dc2626; color:#fff; box-shadow:0 8px 18px rgba(220,38,38,.18); }
     .status { padding:10px 12px; border-radius:12px; font-weight:700; margin-top:12px; }
     .ok { background:#ccfbf1; color:var(--ok); }
     .warn { background:#fef3c7; color:var(--warn); }
@@ -39,7 +42,7 @@
     th,td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; }
     .pill { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af; }
     .scanner-box {
-      border:2px dashed #93c5fd; border-radius:16px; background:#eff6ff; padding:18px; text-align:center;
+      border:2px dashed #93c5fd; border-radius:18px; background:linear-gradient(180deg,#eff6ff 0%,#f8fbff 100%); padding:20px; text-align:center;
     }
     .scanner-code {
       font-size:28px; font-weight:800; letter-spacing:.04em; margin:8px 0 0 0;
@@ -84,6 +87,7 @@
         <div class="topbar">
           <div>
             <h1 style="margin-bottom:6px;">Sistema de rondas</h1>
+            <div class="small">Versión operativa con escaneo interno y descarga protegida.</div>
             <div class="small">Sesión activa. Desde aquí se realizará el escaneo interno y el registro de puntos.</div>
           </div>
           <button id="btnCerrarSesion" class="danger">Cerrar sesión</button>
@@ -101,6 +105,7 @@
           <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
           <button id="btnDescargarDatos" class="secondary">Descargar datos</button>
         </div>
+        <div class="small" style="margin-top:10px;">La descarga solo incluye: punto, fecha, hora y ubicación.</div>
         <div id="mensajeGeneral"></div>
       </div>
 
@@ -162,7 +167,7 @@
     }
 
     const CONTRASENA_GENERAL = 'RONDAS2026';
-    const CONTRASENA_DESCARGA = 'seguridad';
+    const CONTRASENA_DESCARGA = 'Seguridad502';
     const SESSION_KEY = 'rondas_sesion_activa';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
@@ -500,7 +505,8 @@
         });
 
         const encabezados = ['Punto', 'Fecha', 'Hora', 'Ubicacion'];
-        const lineas = [encabezados.join(',')];
+        const separador = ';';
+        const lineas = [encabezados.join(separador)];
 
         filas.forEach((fila) => {
           lineas.push([
@@ -508,10 +514,10 @@
             escaparCsv(fila.fecha),
             escaparCsv(fila.hora),
             escaparCsv(fila.ubicacion)
-          ].join(','));
+          ].join(separador));
         });
 
-        const blob = new Blob([lineas.join('')], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -519,7 +525,7 @@
         a.click();
         URL.revokeObjectURL(url);
 
-        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente.', 'ok');
+        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente en formato tabla CSV.', 'ok');
       } catch (e) {
         console.error(e);
         mostrarMensaje(mensajeGeneral, `No se pudieron descargar los datos: ${e.message}`, 'error');
