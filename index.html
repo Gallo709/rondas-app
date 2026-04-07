@@ -99,6 +99,7 @@
         <div class="actions">
           <button id="btnEscanear" class="primary">Escanear punto</button>
           <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
+          <button id="btnDescargarDatos" class="secondary">Descargar datos</button>
         </div>
         <div id="mensajeGeneral"></div>
       </div>
@@ -140,7 +141,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC0-BSg3qZda0gtZV11ADmhPpJTrYX_P5U",
@@ -161,6 +162,7 @@
     }
 
     const CONTRASENA_GENERAL = 'RONDAS2026';
+    const CONTRASENA_DESCARGA = 'seguridad';
     const SESSION_KEY = 'rondas_sesion_activa';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
@@ -186,6 +188,7 @@
     const elUbicacion = document.getElementById('ubicacion');
     const elTabla = document.getElementById('tablaPendientes');
     const elResumen = document.getElementById('resumenPendientes');
+    const btnDescargarDatos = document.getElementById('btnDescargarDatos');
 
     let ultimaUbicacion = { latitud:null, longitud:null, precision:null, error:null };
     let codigoEscaneadoActual = '';
@@ -461,6 +464,68 @@
       }
     }
 
+    function escaparCsv(valor) {
+      const texto = String(valor ?? '');
+      return `"${texto.replace(/"/g, '""')}"`;
+    }
+
+    async function descargarDatos() {
+      const clave = prompt('Ingresa la contraseña de descarga:');
+
+      if (clave === null) return;
+
+      if (clave !== CONTRASENA_DESCARGA) {
+        mostrarMensaje(mensajeGeneral, 'Contraseña de descarga incorrecta.', 'error');
+        return;
+      }
+
+      try {
+        const snapshot = await getDocs(collection(db, 'rondas'));
+        const filas = [];
+
+        snapshot.forEach((doc) => {
+          const item = doc.data();
+          filas.push({
+            punto: item.nombrePunto || item.codigoPunto || '',
+            fecha: item.fecha || '',
+            hora: item.hora || '',
+            ubicacion: `${item.latitud ?? ''}, ${item.longitud ?? ''}`
+          });
+        });
+
+        filas.sort((a, b) => {
+          const aa = `${a.fecha} ${a.hora}`;
+          const bb = `${b.fecha} ${b.hora}`;
+          return aa.localeCompare(bb);
+        });
+
+        const encabezados = ['Punto', 'Fecha', 'Hora', 'Ubicacion'];
+        const lineas = [encabezados.join(',')];
+
+        filas.forEach((fila) => {
+          lineas.push([
+            escaparCsv(fila.punto),
+            escaparCsv(fila.fecha),
+            escaparCsv(fila.hora),
+            escaparCsv(fila.ubicacion)
+          ].join(','));
+        });
+
+        const blob = new Blob([lineas.join('')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rondas_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente.', 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeGeneral, `No se pudieron descargar los datos: ${e.message}`, 'error');
+      }
+    }
+
     function inicializar() {
       if (localStorage.getItem(SESSION_KEY) === 'true') {
         abrirApp();
@@ -487,6 +552,7 @@
       document.getElementById('btnDetenerCamara').addEventListener('click', detenerCamara);
       document.getElementById('btnRegistrarPunto').addEventListener('click', registrarPuntoEscaneado);
       document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
+      btnDescargarDatos.addEventListener('click', descargarDatos);
     }
 
     inicializar();
