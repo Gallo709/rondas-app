@@ -7,66 +7,127 @@
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1d4ed8">
   <style>
-    :root { --bg:#f6f8fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --ok:#0f766e; --warn:#b45309; --error:#b91c1c; --border:#e5e7eb; --primary:#1d4ed8; }
+    :root {
+      --bg:#f6f8fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
+      --ok:#0f766e; --warn:#b45309; --error:#b91c1c; --border:#e5e7eb; --primary:#1d4ed8;
+    }
     * { box-sizing:border-box; }
     body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); padding:18px; }
-    .wrap { max-width:720px; margin:0 auto; }
+    .wrap { max-width:760px; margin:0 auto; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 6px 22px rgba(0,0,0,.05); margin-bottom:16px; }
-    h1,h2 { margin-top:0; }
+    h1,h2,h3 { margin-top:0; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .field { padding:12px; border:1px solid var(--border); border-radius:12px; background:#fafafa; }
     .label { font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
     .value { font-size:16px; font-weight:600; word-break:break-word; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
     button { border:0; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:700; cursor:pointer; }
-    .primary{background:var(--primary); color:#fff;}
-    .secondary{background:#e5e7eb; color:#111827;}
+    .primary { background:var(--primary); color:#fff; }
+    .secondary { background:#e5e7eb; color:#111827; }
+    .danger { background:#dc2626; color:#fff; }
     .status { padding:10px 12px; border-radius:12px; font-weight:700; margin-top:12px; }
-    .ok { background:#ccfbf1; color:var(--ok);}
-    .warn{background:#fef3c7; color:var(--warn);}
-    .error{background:#fee2e2; color:var(--error);}
+    .ok { background:#ccfbf1; color:var(--ok); }
+    .warn { background:#fef3c7; color:var(--warn); }
+    .error { background:#fee2e2; color:var(--error); }
     .small { color:var(--muted); font-size:13px; line-height:1.5; }
-    table{width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;}
-    th,td{border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top;}
-    .pill{display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af;}
-    @media (max-width:640px){ .grid{grid-template-columns:1fr;} body{padding:12px;} }
+    .hidden { display:none !important; }
+    input {
+      width:100%; padding:12px; border:1px solid var(--border); border-radius:12px;
+      font-size:15px; outline:none;
+    }
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
+    th,td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; }
+    .pill { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af; }
+    .pill-ok { background:#ccfbf1; color:#115e59; }
+    .scanner-box {
+      border:2px dashed #93c5fd; border-radius:16px; background:#eff6ff; padding:18px; text-align:center;
+    }
+    .scanner-code {
+      font-size:28px; font-weight:800; letter-spacing:.04em; margin:8px 0 0 0;
+    }
+    .topbar {
+      display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    @media (max-width:640px) {
+      .grid { grid-template-columns:1fr; }
+      body { padding:12px; }
+      .scanner-code { font-size:22px; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1>Registro de rondas</h1>
-      <p class="small">Registra punto, fecha, hora y ubicación. Si no hay internet, guarda pendiente y luego sincroniza.</p>
-
-      <div class="grid">
-        <div class="field"><div class="label">Código del punto</div><div id="codigoPunto" class="value">-</div></div>
-        <div class="field"><div class="label">Nombre del punto</div><div id="nombrePunto" class="value">-</div></div>
-        <div class="field"><div class="label">Fecha</div><div id="fechaActual" class="value">-</div></div>
-        <div class="field"><div class="label">Hora</div><div id="horaActual" class="value">-</div></div>
-        <div class="field"><div class="label">Internet</div><div id="estadoConexion" class="value">-</div></div>
-        <div class="field"><div class="label">Ubicación</div><div id="ubicacion" class="value">Obteniendo ubicación...</div></div>
+    <section id="pantallaLogin" class="card">
+      <h1>Acceso a rondas</h1>
+      <p class="small">Ingresa la contraseña general para usar el sistema. Esta versión ya está pensada para trabajar desde dentro de la app web.</p>
+      <div class="field" style="margin-top:14px;">
+        <div class="label">Contraseña general</div>
+        <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
       </div>
-
       <div class="actions">
-        <button id="btnRegistrar" class="primary">Registrar punto</button>
-        <button id="btnSincronizar" class="secondary">Intentar sincronizar pendientes</button>
-        <button id="btnExportar" class="secondary">Exportar registros JSON</button>
+        <button id="btnIngresar" class="primary">Ingresar</button>
+      </div>
+      <div id="mensajeLogin"></div>
+    </section>
+
+    <section id="pantallaApp" class="hidden">
+      <div class="card">
+        <div class="topbar">
+          <div>
+            <h1 style="margin-bottom:6px;">Sistema de rondas</h1>
+            <div class="small">Sesión activa. Desde aquí se realizará el escaneo interno y el registro de puntos.</div>
+          </div>
+          <button id="btnCerrarSesion" class="danger">Cerrar sesión</button>
+        </div>
+
+        <div class="grid">
+          <div class="field"><div class="label">Internet</div><div id="estadoConexion" class="value">-</div></div>
+          <div class="field"><div class="label">Fecha</div><div id="fechaActual" class="value">-</div></div>
+          <div class="field"><div class="label">Hora</div><div id="horaActual" class="value">-</div></div>
+          <div class="field"><div class="label">Ubicación</div><div id="ubicacion" class="value">Obteniendo ubicación...</div></div>
+        </div>
+
+        <div class="actions">
+          <button id="btnEscanear" class="primary">Escanear punto</button>
+          <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
+        </div>
+        <div id="mensajeGeneral"></div>
       </div>
 
-      <div id="mensaje"></div>
-    </div>
+      <div class="card hidden" id="panelEscaner">
+        <h2>Escaneo interno</h2>
+        <p class="small">Por ahora esta versión usa ingreso manual del código del QR para dejar lista la estructura del flujo. El siguiente paso será abrir la cámara dentro de la misma app.</p>
+        <div class="scanner-box">
+          <div class="label" style="margin-bottom:10px;">Código detectado o ingresado</div>
+          <div id="codigoLeidoVista" class="scanner-code">SIN CÓDIGO</div>
+          <div class="small" style="margin-top:10px;">Ejemplos: PUNTO-001, PUNTO-002, PUNTO-003</div>
+        </div>
 
-    <div class="card">
-      <h2>Pendientes guardados</h2>
-      <p class="small">Estos registros quedan almacenados en el navegador mientras no haya internet.</p>
-      <div id="resumenPendientes" class="small">0 registros pendientes</div>
-      <table>
-        <thead>
-          <tr><th>Punto</th><th>Fecha y hora</th><th>Estado</th></tr>
-        </thead>
-        <tbody id="tablaPendientes"></tbody>
-      </table>
-    </div>
+        <div class="field" style="margin-top:14px;">
+          <div class="label">Ingresar código del punto</div>
+          <input id="codigoManualInput" type="text" placeholder="Ejemplo: PUNTO-001" autocapitalize="characters" autocomplete="off">
+        </div>
+
+        <div class="actions">
+          <button id="btnUsarCodigo" class="primary">Usar código</button>
+          <button id="btnRegistrarPunto" class="secondary">Registrar punto</button>
+        </div>
+        <div id="mensajeEscaner"></div>
+      </div>
+
+      <div class="card">
+        <h2>Pendientes guardados</h2>
+        <p class="small">Estos registros quedan almacenados en el navegador mientras no haya internet o mientras no se logren sincronizar.</p>
+        <div id="resumenPendientes" class="small">0 registros pendientes</div>
+        <table>
+          <thead>
+            <tr><th>Punto</th><th>Fecha y hora</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="tablaPendientes"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 
   <script type="module">
@@ -91,29 +152,40 @@
       });
     }
 
+    const CONTRASENA_GENERAL = 'RONDAS2026';
+    const SESSION_KEY = 'rondas_sesion_activa';
+    const STORAGE_KEY = 'rondas_pendientes';
+    const STORAGE_SENT_KEY = 'rondas_enviadas';
+
     const PUNTOS = {
       'PUNTO-001': 'Garita principal',
-      'PUNTO-002': 'Bodega'
+      'PUNTO-002': 'Bodega',
+      'PUNTO-003': 'Vestidores',
+      'PUNTO-004': 'Parqueo'
     };
 
-    const STORAGE_KEY = 'rondas_pendientes';
-    const STORAGE_SENT_KEY = 'rondas_enviadas_mock';
-
-    const elCodigo = document.getElementById('codigoPunto');
-    const elNombre = document.getElementById('nombrePunto');
+    const pantallaLogin = document.getElementById('pantallaLogin');
+    const pantallaApp = document.getElementById('pantallaApp');
+    const panelEscaner = document.getElementById('panelEscaner');
+    const passwordInput = document.getElementById('passwordInput');
+    const mensajeLogin = document.getElementById('mensajeLogin');
+    const mensajeGeneral = document.getElementById('mensajeGeneral');
+    const mensajeEscaner = document.getElementById('mensajeEscaner');
+    const codigoManualInput = document.getElementById('codigoManualInput');
+    const codigoLeidoVista = document.getElementById('codigoLeidoVista');
+    const elConexion = document.getElementById('estadoConexion');
     const elFecha = document.getElementById('fechaActual');
     const elHora = document.getElementById('horaActual');
-    const elConexion = document.getElementById('estadoConexion');
     const elUbicacion = document.getElementById('ubicacion');
-    const elMensaje = document.getElementById('mensaje');
     const elTabla = document.getElementById('tablaPendientes');
     const elResumen = document.getElementById('resumenPendientes');
 
     let ultimaUbicacion = { latitud:null, longitud:null, precision:null, error:null };
+    let codigoEscaneadoActual = '';
 
-    const getParam = n => new URL(window.location.href).searchParams.get(n);
-    const obtenerCodigoPunto = () => getParam('p') || 'PUNTO-001';
-    const obtenerNombrePunto = c => PUNTOS[c] || 'Punto no configurado';
+    function mostrarMensaje(el, texto, tipo = 'ok') {
+      el.innerHTML = `<div class="status ${tipo}">${texto}</div>`;
+    }
 
     function actualizarFechaHora() {
       const a = new Date();
@@ -123,43 +195,6 @@
 
     function actualizarConexion() {
       elConexion.textContent = navigator.onLine ? 'Con conexión' : 'Sin conexión';
-    }
-
-    function mostrarMensaje(t, tipo='ok') {
-      elMensaje.innerHTML = `<div class="status ${tipo}">${t}</div>`;
-    }
-
-    const leerPendientes = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const leerEnviados = () => JSON.parse(localStorage.getItem(STORAGE_SENT_KEY) || '[]');
-
-    function guardarPendientes(d) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-      renderPendientes();
-    }
-
-    function guardarEnviados(d) {
-      localStorage.setItem(STORAGE_SENT_KEY, JSON.stringify(d));
-    }
-
-    function renderPendientes() {
-      const p = leerPendientes();
-      elResumen.textContent = `${p.length} registro(s) pendiente(s)`;
-      elTabla.innerHTML = '';
-
-      if (!p.length) {
-        elTabla.innerHTML = '<tr><td colspan="3">No hay registros pendientes.</td></tr>';
-        return;
-      }
-
-      p.slice().reverse().forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${item.nombrePunto}</strong><br><span class="small">${item.codigoPunto}</span></td>
-          <td>${item.fecha} ${item.hora}</td>
-          <td><span class="pill">${item.estado}</span></td>
-        `;
-        elTabla.appendChild(tr);
-      });
     }
 
     function capturarUbicacion() {
@@ -187,10 +222,109 @@
       );
     }
 
+    function leerPendientes() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+
+    function guardarPendientes(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      renderPendientes();
+    }
+
+    function leerEnviados() {
+      return JSON.parse(localStorage.getItem(STORAGE_SENT_KEY) || '[]');
+    }
+
+    function guardarEnviados(data) {
+      localStorage.setItem(STORAGE_SENT_KEY, JSON.stringify(data));
+    }
+
+    function renderPendientes() {
+      const pendientes = leerPendientes();
+      elResumen.textContent = `${pendientes.length} registro(s) pendiente(s)`;
+      elTabla.innerHTML = '';
+
+      if (!pendientes.length) {
+        elTabla.innerHTML = '<tr><td colspan="3">No hay registros pendientes.</td></tr>';
+        return;
+      }
+
+      pendientes.slice().reverse().forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${item.nombrePunto}</strong><br><span class="small">${item.codigoPunto}</span></td>
+          <td>${item.fecha} ${item.hora}</td>
+          <td><span class="pill">${item.estado}</span></td>
+        `;
+        elTabla.appendChild(tr);
+      });
+    }
+
+    function abrirApp() {
+      pantallaLogin.classList.add('hidden');
+      pantallaApp.classList.remove('hidden');
+      actualizarFechaHora();
+      actualizarConexion();
+      capturarUbicacion();
+      renderPendientes();
+    }
+
+    function cerrarSesion() {
+      localStorage.removeItem(SESSION_KEY);
+      pantallaApp.classList.add('hidden');
+      pantallaLogin.classList.remove('hidden');
+      panelEscaner.classList.add('hidden');
+      passwordInput.value = '';
+      codigoManualInput.value = '';
+      codigoEscaneadoActual = '';
+      codigoLeidoVista.textContent = 'SIN CÓDIGO';
+      mensajeGeneral.innerHTML = '';
+      mensajeEscaner.innerHTML = '';
+    }
+
+    function iniciarSesion() {
+      const clave = passwordInput.value.trim();
+
+      if (clave !== CONTRASENA_GENERAL) {
+        mostrarMensaje(mensajeLogin, 'Contraseña incorrecta.', 'error');
+        return;
+      }
+
+      localStorage.setItem(SESSION_KEY, 'true');
+      mensajeLogin.innerHTML = '';
+      abrirApp();
+    }
+
+    function activarEscaner() {
+      panelEscaner.classList.remove('hidden');
+      codigoManualInput.focus();
+      mostrarMensaje(mensajeEscaner, 'Ingresa el código del punto para simular el escaneo interno. Después conectamos la cámara.', 'ok');
+    }
+
+    function usarCodigoManual() {
+      const codigo = codigoManualInput.value.trim().toUpperCase();
+
+      if (!codigo) {
+        mostrarMensaje(mensajeEscaner, 'Debes ingresar un código de punto.', 'error');
+        return;
+      }
+
+      if (!PUNTOS[codigo]) {
+        mostrarMensaje(mensajeEscaner, 'Ese código no existe en la lista de puntos.', 'error');
+        codigoLeidoVista.textContent = codigo;
+        codigoEscaneadoActual = '';
+        return;
+      }
+
+      codigoEscaneadoActual = codigo;
+      codigoLeidoVista.textContent = `${codigo} - ${PUNTOS[codigo]}`;
+      mostrarMensaje(mensajeEscaner, 'Código cargado correctamente. Ya puedes registrar el punto.', 'ok');
+    }
+
     async function enviarRegistro(registro) {
       if (!navigator.onLine) throw new Error('Sin internet');
 
-      await addDoc(collection(db, 'rondas'), {
+      const ref = await addDoc(collection(db, 'rondas'), {
         codigoPunto: registro.codigoPunto,
         nombrePunto: registro.nombrePunto,
         fecha: registro.fecha,
@@ -204,25 +338,27 @@
       });
 
       const enviados = leerEnviados();
-      enviados.push({ ...registro, estado:'Enviado' });
+      enviados.push({ ...registro, estado:'Enviado', firebaseId: ref.id });
       guardarEnviados(enviados);
       return true;
     }
 
-    async function registrarPunto() {
+    async function registrarPuntoEscaneado() {
       actualizarFechaHora();
 
-      const codigoPunto = obtenerCodigoPunto();
-      const nombrePunto = obtenerNombrePunto(codigoPunto);
-      const a = new Date();
+      if (!codigoEscaneadoActual) {
+        mostrarMensaje(mensajeEscaner, 'Primero debes escanear o ingresar un código válido.', 'error');
+        return;
+      }
 
+      const ahora = new Date();
       const registro = {
         id: crypto.randomUUID(),
-        codigoPunto,
-        nombrePunto,
-        fecha: a.toLocaleDateString('es-GT'),
-        hora: a.toLocaleTimeString('es-GT'),
-        timestampISO: a.toISOString(),
+        codigoPunto: codigoEscaneadoActual,
+        nombrePunto: PUNTOS[codigoEscaneadoActual],
+        fecha: ahora.toLocaleDateString('es-GT'),
+        hora: ahora.toLocaleTimeString('es-GT'),
+        timestampISO: ahora.toISOString(),
         latitud: ultimaUbicacion.latitud,
         longitud: ultimaUbicacion.longitud,
         precision: ultimaUbicacion.precision,
@@ -236,28 +372,29 @@
 
       try {
         await sincronizarPendientes();
-        mostrarMensaje('Registro capturado correctamente.', 'ok');
+        mostrarMensaje(mensajeGeneral, `Punto registrado correctamente: ${registro.nombrePunto}.`, 'ok');
+        mostrarMensaje(mensajeEscaner, 'Escaneo registrado y sincronizado correctamente.', 'ok');
       } catch (e) {
         console.error(e);
-        mostrarMensaje(`Registro guardado como pendiente. Error: ${e.message}`, 'warn');
+        mostrarMensaje(mensajeGeneral, `Registro guardado como pendiente. Error: ${e.message}`, 'warn');
+        mostrarMensaje(mensajeEscaner, 'El punto quedó pendiente de sincronizar.', 'warn');
       }
     }
 
     async function sincronizarPendientes() {
-      let pendientes = leerPendientes();
+      const pendientes = leerPendientes();
 
       if (!pendientes.length) {
-        mostrarMensaje('No hay registros pendientes por sincronizar.', 'ok');
+        mostrarMensaje(mensajeGeneral, 'No hay registros pendientes por sincronizar.', 'ok');
         return;
       }
 
       if (!navigator.onLine) {
-        mostrarMensaje('No hay internet. Los registros siguen pendientes.', 'warn');
+        mostrarMensaje(mensajeGeneral, 'No hay internet. Los registros siguen pendientes.', 'warn');
         throw new Error('Sin internet');
       }
 
       const restantes = [];
-
       for (const item of pendientes) {
         try {
           await enviarRegistro(item);
@@ -270,52 +407,40 @@
       guardarPendientes(restantes);
 
       if (restantes.length === 0) {
-        mostrarMensaje('Todos los registros pendientes fueron sincronizados.', 'ok');
+        mostrarMensaje(mensajeGeneral, 'Todos los registros pendientes fueron sincronizados.', 'ok');
       } else {
         throw new Error(`Quedaron pendientes: ${restantes.length}`);
       }
     }
 
-    function exportarRegistros() {
-      const data = {
-        pendientes: leerPendientes(),
-        enviados: leerEnviados(),
-        exportadoEn: new Date().toISOString()
-      };
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rondas_export_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
     function inicializar() {
-      const codigo = obtenerCodigoPunto();
-      const nombre = obtenerNombrePunto(codigo);
-
-      elCodigo.textContent = codigo;
-      elNombre.textContent = nombre;
+      if (localStorage.getItem(SESSION_KEY) === 'true') {
+        abrirApp();
+      }
 
       actualizarFechaHora();
-      actualizarConexion();
-      capturarUbicacion();
-      renderPendientes();
-
       setInterval(actualizarFechaHora, 1000);
+      renderPendientes();
 
       window.addEventListener('online', () => {
         actualizarConexion();
         sincronizarPendientes().catch(console.error);
       });
-
       window.addEventListener('offline', actualizarConexion);
 
-      document.getElementById('btnRegistrar').addEventListener('click', registrarPunto);
+      document.getElementById('btnIngresar').addEventListener('click', iniciarSesion);
+      passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') iniciarSesion();
+      });
+
+      document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
+      document.getElementById('btnEscanear').addEventListener('click', activarEscaner);
+      document.getElementById('btnUsarCodigo').addEventListener('click', usarCodigoManual);
+      codigoManualInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') usarCodigoManual();
+      });
+      document.getElementById('btnRegistrarPunto').addEventListener('click', registrarPuntoEscaneado);
       document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
-      document.getElementById('btnExportar').addEventListener('click', exportarRegistros);
     }
 
     inicializar();
