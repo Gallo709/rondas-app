@@ -523,7 +523,7 @@
           ].join(separador));
         });
 
-        const blob = new Blob(['﻿' + lineas.join('')], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
