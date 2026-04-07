@@ -1,9 +1,10 @@
-const CACHE_NAME = 'rondas-mvp-v4';
+const CACHE_NAME = 'rondas-mvp-v5';
 
 const FILES_TO_CACHE = [
   './',
   './index.html',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './html5-qrcode.min.js'
 ];
 
 self.addEventListener('install', event => {
@@ -29,7 +30,6 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Navegación dentro de tu sitio
   if (event.request.mode === 'navigate' && url.origin === self.location.origin) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('./index.html'))
@@ -37,7 +37,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Archivos estáticos
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request))
   );
