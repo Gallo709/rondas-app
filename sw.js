@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rondas-mvp-v3';
+const CACHE_NAME = 'rondas-mvp-v4';
 
 const FILES_TO_CACHE = [
   './',
@@ -29,15 +29,15 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Si es navegación a una página de tu app, devolver index.html desde caché
+  // Navegación dentro de tu sitio
   if (event.request.mode === 'navigate' && url.origin === self.location.origin) {
     event.respondWith(
-      caches.match('./index.html').then(cached => cached || fetch('./index.html'))
+      fetch(event.request).catch(() => caches.match('./index.html'))
     );
     return;
   }
 
-  // Para archivos estáticos, intentar caché primero
+  // Archivos estáticos
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request))
   );
