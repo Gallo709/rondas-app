@@ -1,0 +1,9 @@
+{
+  "name": "Registro de Rondas",
+  "short_name": "Rondas",
+  "start_url": "./index.html?p=PUNTO-001",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#1d4ed8",
+  "icons": []
+}

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Rondas</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1d4ed8">
+  <style>
+    :root { --bg:#f6f8fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --ok:#0f766e; --warn:#b45309; --error:#b91c1c; --border:#e5e7eb; --primary:#1d4ed8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); padding:18px; }
+    .wrap { max-width:720px; margin:0 auto; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 6px 22px rgba(0,0,0,.05); margin-bottom:16px; }
+    h1,h2 { margin-top:0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .field { padding:12px; border:1px solid var(--border); border-radius:12px; background:#fafafa; }
+    .label { font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
+    .value { font-size:16px; font-weight:600; word-break:break-word; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    button { border:0; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:700; cursor:pointer; }
+    .primary{background:var(--primary); color:#fff;}
+    .secondary{background:#e5e7eb; color:#111827;}
+    .status { padding:10px 12px; border-radius:12px; font-weight:700; margin-top:12px; }
+    .ok { background:#ccfbf1; color:var(--ok);}
+    .warn{background:#fef3c7; color:var(--warn);}
+    .error{background:#fee2e2; color:var(--error);}
+    .small { color:var(--muted); font-size:13px; line-height:1.5; }
+    table{width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;}
+    th,td{border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top;}
+    .pill{display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af;}
+    @media (max-width:640px){ .grid{grid-template-columns:1fr;} body{padding:12px;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Registro de rondas</h1>
+      <p class="small">Registra punto, fecha, hora y ubicación. Si no hay internet, guarda pendiente y luego sincroniza.</p>
+
+      <div class="grid">
+        <div class="field"><div class="label">Código del punto</div><div id="codigoPunto" class="value">-</div></div>
+        <div class="field"><div class="label">Nombre del punto</div><div id="nombrePunto" class="value">-</div></div>
+        <div class="field"><div class="label">Fecha</div><div id="fechaActual" class="value">-</div></div>
+        <div class="field"><div class="label">Hora</div><div id="horaActual" class="value">-</div></div>
+        <div class="field"><div class="label">Internet</div><div id="estadoConexion" class="value">-</div></div>
+        <div class="field"><div class="label">Ubicación</div><div id="ubicacion" class="value">Obteniendo ubicación...</div></div>
+      </div>
+
+      <div class="actions">
+        <button id="btnRegistrar" class="primary">Registrar punto</button>
+        <button id="btnSincronizar" class="secondary">Intentar sincronizar pendientes</button>
+        <button id="btnExportar" class="secondary">Exportar registros JSON</button>
+      </div>
+
+      <div id="mensaje"></div>
+    </div>
+
+    <div class="card">
+      <h2>Pendientes guardados</h2>
+      <p class="small">Estos registros quedan almacenados en el navegador mientras no haya internet.</p>
+      <div id="resumenPendientes" class="small">0 registros pendientes</div>
+      <table>
+        <thead>
+          <tr><th>Punto</th><th>Fecha y hora</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="tablaPendientes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0-BSg3qZda0gtZV11ADmhPpJTrYX_P5U",
+      authDomain: "rondas-8d156.firebaseapp.com",
+      projectId: "rondas-8d156",
+      storageBucket: "rondas-8d156.firebasestorage.app",
+      messagingSenderId: "955004839797",
+      appId: "1:955004839797:web:ed74a5f86e60ba813a953c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+      });
+    }
+
+    const PUNTOS = {
+      'PUNTO-001': 'Garita principal',
+      'PUNTO-002': 'Bodega'
+    };
+
+    const STORAGE_KEY = 'rondas_pendientes';
+    const STORAGE_SENT_KEY = 'rondas_enviadas_mock';
+
+    const elCodigo = document.getElementById('codigoPunto');
+    const elNombre = document.getElementById('nombrePunto');
+    const elFecha = document.getElementById('fechaActual');
+    const elHora = document.getElementById('horaActual');
+    const elConexion = document.getElementById('estadoConexion');
+    const elUbicacion = document.getElementById('ubicacion');
+    const elMensaje = document.getElementById('mensaje');
+    const elTabla = document.getElementById('tablaPendientes');
+    const elResumen = document.getElementById('resumenPendientes');
+
+    let ultimaUbicacion = { latitud:null, longitud:null, precision:null, error:null };
+
+    const getParam = n => new URL(window.location.href).searchParams.get(n);
+    const obtenerCodigoPunto = () => getParam('p') || 'PUNTO-001';
+    const obtenerNombrePunto = c => PUNTOS[c] || 'Punto no configurado';
+
+    function actualizarFechaHora() {
+      const a = new Date();
+      elFecha.textContent = a.toLocaleDateString('es-GT');
+      elHora.textContent = a.toLocaleTimeString('es-GT');
+    }
+
+    function actualizarConexion() {
+      elConexion.textContent = navigator.onLine ? 'Con conexión' : 'Sin conexión';
+    }
+
+    function mostrarMensaje(t, tipo='ok') {
+      elMensaje.innerHTML = `<div class="status ${tipo}">${t}</div>`;
+    }
+
+    const leerPendientes = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const leerEnviados = () => JSON.parse(localStorage.getItem(STORAGE_SENT_KEY) || '[]');
+
+    function guardarPendientes(d) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+      renderPendientes();
+    }
+
+    function guardarEnviados(d) {
+      localStorage.setItem(STORAGE_SENT_KEY, JSON.stringify(d));
+    }
+
+    function renderPendientes() {
+      const p = leerPendientes();
+      elResumen.textContent = `${p.length} registro(s) pendiente(s)`;
+      elTabla.innerHTML = '';
+
+      if (!p.length) {
+        elTabla.innerHTML = '<tr><td colspan="3">No hay registros pendientes.</td></tr>';
+        return;
+      }
+
+      p.slice().reverse().forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${item.nombrePunto}</strong><br><span class="small">${item.codigoPunto}</span></td>
+          <td>${item.fecha} ${item.hora}</td>
+          <td><span class="pill">${item.estado}</span></td>
+        `;
+        elTabla.appendChild(tr);
+      });
+    }
+
+    function capturarUbicacion() {
+      if (!('geolocation' in navigator)) {
+        ultimaUbicacion.error = 'Este navegador no soporta geolocalización';
+        elUbicacion.textContent = ultimaUbicacion.error;
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          ultimaUbicacion = {
+            latitud: pos.coords.latitude,
+            longitud: pos.coords.longitude,
+            precision: pos.coords.accuracy,
+            error: null
+          };
+          elUbicacion.textContent = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)} m)`;
+        },
+        err => {
+          ultimaUbicacion.error = `No se pudo obtener la ubicación: ${err.message}`;
+          elUbicacion.textContent = ultimaUbicacion.error;
+        },
+        { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+      );
+    }
+
+    async function enviarRegistro(registro) {
+      if (!navigator.onLine) throw new Error('Sin internet');
+
+      await addDoc(collection(db, 'rondas'), {
+        codigoPunto: registro.codigoPunto,
+        nombrePunto: registro.nombrePunto,
+        fecha: registro.fecha,
+        hora: registro.hora,
+        timestampISO: registro.timestampISO,
+        latitud: registro.latitud,
+        longitud: registro.longitud,
+        precision: registro.precision,
+        ubicacionError: registro.ubicacionError || null,
+        estado: 'Enviado'
+      });
+
+      const enviados = leerEnviados();
+      enviados.push({ ...registro, estado:'Enviado' });
+      guardarEnviados(enviados);
+      return true;
+    }
+
+    async function registrarPunto() {
+      actualizarFechaHora();
+
+      const codigoPunto = obtenerCodigoPunto();
+      const nombrePunto = obtenerNombrePunto(codigoPunto);
+      const a = new Date();
+
+      const registro = {
+        id: crypto.randomUUID(),
+        codigoPunto,
+        nombrePunto,
+        fecha: a.toLocaleDateString('es-GT'),
+        hora: a.toLocaleTimeString('es-GT'),
+        timestampISO: a.toISOString(),
+        latitud: ultimaUbicacion.latitud,
+        longitud: ultimaUbicacion.longitud,
+        precision: ultimaUbicacion.precision,
+        ubicacionError: ultimaUbicacion.error,
+        estado: 'Pendiente'
+      };
+
+      const pendientes = leerPendientes();
+      pendientes.push(registro);
+      guardarPendientes(pendientes);
+
+      try {
+        await sincronizarPendientes();
+        mostrarMensaje('Registro capturado correctamente.', 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(`Registro guardado como pendiente. Error: ${e.message}`, 'warn');
+      }
+    }
+
+    async function sincronizarPendientes() {
+      let pendientes = leerPendientes();
+
+      if (!pendientes.length) {
+        mostrarMensaje('No hay registros pendientes por sincronizar.', 'ok');
+        return;
+      }
+
+      if (!navigator.onLine) {
+        mostrarMensaje('No hay internet. Los registros siguen pendientes.', 'warn');
+        throw new Error('Sin internet');
+      }
+
+      const restantes = [];
+
+      for (const item of pendientes) {
+        try {
+          await enviarRegistro(item);
+        } catch (e) {
+          console.error('Error enviando registro:', e);
+          restantes.push(item);
+        }
+      }
+
+      guardarPendientes(restantes);
+
+      if (restantes.length === 0) {
+        mostrarMensaje('Todos los registros pendientes fueron sincronizados.', 'ok');
+      } else {
+        throw new Error(`Quedaron pendientes: ${restantes.length}`);
+      }
+    }
+
+    function exportarRegistros() {
+      const data = {
+        pendientes: leerPendientes(),
+        enviados: leerEnviados(),
+        exportadoEn: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rondas_export_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function inicializar() {
+      const codigo = obtenerCodigoPunto();
+      const nombre = obtenerNombrePunto(codigo);
+
+      elCodigo.textContent = codigo;
+      elNombre.textContent = nombre;
+
+      actualizarFechaHora();
+      actualizarConexion();
+      capturarUbicacion();
+      renderPendientes();
+
+      setInterval(actualizarFechaHora, 1000);
+
+      window.addEventListener('online', () => {
+        actualizarConexion();
+        sincronizarPendientes().catch(console.error);
+      });
+
+      window.addEventListener('offline', actualizarConexion);
+
+      document.getElementById('btnRegistrar').addEventListener('click', registrarPunto);
+      document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
+      document.getElementById('btnExportar').addEventListener('click', exportarRegistros);
+    }
+
+    inicializar();
+  </script>
+</body>
+</html>
