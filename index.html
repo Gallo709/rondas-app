@@ -104,6 +104,7 @@
           <button id="btnEscanear" class="primary">Escanear punto</button>
           <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
           <button id="btnDescargarDatos" class="secondary">Descargar datos</button>
+          <button id="btnEliminarRegistros" class="danger">Eliminar registros</button>
         </div>
         <div class="small" style="margin-top:10px;">La descarga solo incluye: punto, fecha, hora y ubicación.</div>
         <div id="mensajeGeneral"></div>
@@ -146,7 +147,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC0-BSg3qZda0gtZV11ADmhPpJTrYX_P5U",
@@ -168,18 +169,16 @@
 
     const CONTRASENA_GENERAL = 'Rondas2026';
     const CONTRASENA_DESCARGA = 'Seguridad502';
+    const CONTRASENA_ELIMINAR = 'Eliminar502';
     const SESSION_KEY = 'rondas_sesion_activa';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
 
     const PUNTOS = {
-      'PUNTO-001': 'Garita #1',
-      'PUNTO-002': 'Pared #1',
-      'PUNTO-003': 'Pared #2',
-      'PUNTO-004': 'Pared #3',
-      'PUNTO-005': 'Planta Elec',
-      'PUNTO-006': 'Poste SAC',
-      'PUNTO-007': 'Puerta Maya'
+      'PUNTO-001': 'Garita principal',
+      'PUNTO-002': 'Bodega',
+      'PUNTO-003': 'Vestidores',
+      'PUNTO-004': 'Parqueo'
     };
 
     const pantallaLogin = document.getElementById('pantallaLogin');
@@ -197,6 +196,7 @@
     const elTabla = document.getElementById('tablaPendientes');
     const elResumen = document.getElementById('resumenPendientes');
     const btnDescargarDatos = document.getElementById('btnDescargarDatos');
+    const btnEliminarRegistros = document.getElementById('btnEliminarRegistros');
 
     let ultimaUbicacion = { latitud:null, longitud:null, precision:null, error:null };
     let codigoEscaneadoActual = '';
@@ -491,8 +491,8 @@
         const snapshot = await getDocs(collection(db, 'rondas'));
         const filas = [];
 
-        snapshot.forEach((doc) => {
-          const item = doc.data();
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
           filas.push({
             punto: item.nombrePunto || item.codigoPunto || '',
             fecha: item.fecha || '',
@@ -520,7 +520,7 @@
           ].join(separador));
         });
 
-        const blob = new Blob(['\uFEFF' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['﻿' + lineas.join('')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -532,6 +532,40 @@
       } catch (e) {
         console.error(e);
         mostrarMensaje(mensajeGeneral, `No se pudieron descargar los datos: ${e.message}`, 'error');
+      }
+    }
+
+    async function eliminarRegistros() {
+      const clave = prompt('Ingresa la contraseña para eliminar registros:');
+
+      if (clave === null) return;
+
+      if (clave !== CONTRASENA_ELIMINAR) {
+        mostrarMensaje(mensajeGeneral, 'Contraseña para eliminar incorrecta.', 'error');
+        return;
+      }
+
+      const confirmacion = confirm('Esta acción eliminará todos los registros de Firestore y los pendientes locales. ¿Deseas continuar?');
+      if (!confirmacion) return;
+
+      try {
+        const snapshot = await getDocs(collection(db, 'rondas'));
+        const eliminaciones = [];
+
+        snapshot.forEach((docSnap) => {
+          eliminaciones.push(deleteDoc(doc(db, 'rondas', docSnap.id)));
+        });
+
+        await Promise.all(eliminaciones);
+
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_SENT_KEY);
+        renderPendientes();
+
+        mostrarMensaje(mensajeGeneral, 'Todos los registros fueron eliminados correctamente.', 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeGeneral, `No se pudieron eliminar los registros: ${e.message}`, 'error');
       }
     }
 
@@ -562,6 +596,7 @@
       document.getElementById('btnRegistrarPunto').addEventListener('click', registrarPuntoEscaneado);
       document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
       btnDescargarDatos.addEventListener('click', descargarDatos);
+      btnEliminarRegistros.addEventListener('click', eliminarRegistros);
     }
 
     inicializar();
