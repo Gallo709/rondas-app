@@ -8,115 +8,528 @@
   <meta name="theme-color" content="#1d4ed8">
   <style>
     :root {
-      --bg:#f6f8fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
-      --ok:#0f766e; --warn:#b45309; --error:#b91c1c; --border:#e5e7eb; --primary:#1d4ed8;
+      --bg:#eef3f9;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --ok:#0f766e;
+      --warn:#b45309;
+      --error:#b91c1c;
+      --border:#e5e7eb;
+      --primary:#1d4ed8;
+      --primary-soft:#dbeafe;
+      --secondary:#e5e7eb;
+      --success:#15803d;
+      --success-soft:#dcfce7;
+      --danger:#dc2626;
+      --danger-soft:#fee2e2;
+      --shadow:0 10px 30px rgba(0,0,0,.06);
+      --radius-xl:22px;
+      --radius-lg:18px;
+      --radius-md:14px;
     }
+
     * { box-sizing:border-box; }
-    body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); padding:18px; }
-    .wrap { max-width:760px; margin:0 auto; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.06); margin-bottom:18px; }
-    h1,h2,h3 { margin-top:0; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .field { padding:14px; border:1px solid var(--border); border-radius:14px; background:#fafafa; }
-    .label { font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
-    .value { font-size:16px; font-weight:600; word-break:break-word; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
-    button { border:0; border-radius:14px; padding:12px 16px; font-size:15px; font-weight:700; cursor:pointer; transition:transform .15s ease, opacity .15s ease; }
+
+    body {
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#edf4ff 0%, #f6f8fb 100%);
+      color:var(--text);
+      padding:14px;
+    }
+
+    .wrap {
+      max-width:760px;
+      margin:0 auto;
+    }
+
+    .app-header {
+      position:sticky;
+      top:0;
+      z-index:20;
+      margin-bottom:14px;
+      backdrop-filter: blur(10px);
+    }
+
+    .app-header-inner {
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(229,231,235,.9);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .brand-title {
+      margin:0;
+      font-size:20px;
+      font-weight:800;
+      color:#0f172a;
+    }
+
+    .brand-subtitle {
+      margin-top:4px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-xl);
+      padding:20px;
+      box-shadow:var(--shadow);
+      margin-bottom:16px;
+    }
+
+    h1,h2,h3 {
+      margin-top:0;
+      color:#111827;
+    }
+
+    h1 {
+      font-size:26px;
+      margin-bottom:6px;
+    }
+
+    h2 {
+      font-size:20px;
+      margin-bottom:8px;
+    }
+
+    .small {
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .hidden { display:none !important; }
+
+    .grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .field {
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#f8fafc;
+    }
+
+    .field.soft-blue {
+      background:#f4f8ff;
+      border-color:#dbeafe;
+    }
+
+    .field.soft-green {
+      background:#f3fff8;
+      border-color:#d1fae5;
+    }
+
+    .label {
+      font-size:11px;
+      color:var(--muted);
+      margin-bottom:6px;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      font-weight:700;
+    }
+
+    .value {
+      font-size:16px;
+      font-weight:700;
+      word-break:break-word;
+      line-height:1.4;
+    }
+
+    .actions {
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+
+    button {
+      border:0;
+      border-radius:16px;
+      padding:15px 18px;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+      min-height:52px;
+    }
+
     button:hover { transform:translateY(-1px); }
     button:active { transform:translateY(0); }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    .primary { background:var(--primary); color:#fff; box-shadow:0 8px 18px rgba(29,78,216,.22); }
-    .secondary { background:#eef2f7; color:#111827; }
-    .danger { background:#dc2626; color:#fff; box-shadow:0 8px 18px rgba(220,38,38,.18); }
-    .status { padding:10px 12px; border-radius:12px; font-weight:700; margin-top:12px; }
-    .ok { background:#ccfbf1; color:var(--ok); }
-    .warn { background:#fef3c7; color:var(--warn); }
-    .error { background:#fee2e2; color:var(--error); }
-    .small { color:var(--muted); font-size:13px; line-height:1.5; }
-    .hidden { display:none !important; }
+
+    .btn-block {
+      width:100%;
+    }
+
+    .primary {
+      background:var(--primary);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(29,78,216,.22);
+    }
+
+    .secondary {
+      background:#eef2f7;
+      color:#111827;
+      box-shadow:0 6px 14px rgba(15,23,42,.06);
+    }
+
+    .success {
+      background:var(--success);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(21,128,61,.20);
+    }
+
+    .danger {
+      background:var(--danger);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(220,38,38,.18);
+    }
+
+    .status {
+      padding:12px 14px;
+      border-radius:14px;
+      font-weight:700;
+      margin-top:12px;
+      font-size:14px;
+    }
+
+    .ok {
+      background:#ccfbf1;
+      color:var(--ok);
+    }
+
+    .warn {
+      background:#fef3c7;
+      color:var(--warn);
+    }
+
+    .error {
+      background:#fee2e2;
+      color:var(--error);
+    }
+
     input {
-      width:100%; padding:12px; border:1px solid var(--border); border-radius:12px;
-      font-size:15px; outline:none;
+      width:100%;
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      font-size:15px;
+      outline:none;
+      background:#fff;
     }
-    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
-    th,td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; }
-    .pill { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; background:#dbeafe; color:#1e40af; }
+
+    input:focus {
+      border-color:#93c5fd;
+      box-shadow:0 0 0 3px rgba(59,130,246,.12);
+    }
+
+    .login-card {
+      padding-top:28px;
+      padding-bottom:24px;
+    }
+
+    .login-title {
+      text-align:center;
+      margin-bottom:8px;
+    }
+
+    .login-subtitle {
+      text-align:center;
+      margin-bottom:18px;
+    }
+
     .scanner-box {
-      border:2px dashed #93c5fd; border-radius:18px; background:linear-gradient(180deg,#eff6ff 0%,#f8fbff 100%); padding:20px; text-align:center;
+      border:2px dashed #93c5fd;
+      border-radius:20px;
+      background:linear-gradient(180deg,#eff6ff 0%,#f8fbff 100%);
+      padding:22px;
+      text-align:center;
     }
+
     .scanner-code {
-      font-size:28px; font-weight:800; letter-spacing:.04em; margin:8px 0 0 0;
+      font-size:28px;
+      font-weight:900;
+      letter-spacing:.04em;
+      margin:8px 0 0 0;
+      color:#0f172a;
+      line-height:1.3;
     }
-    .topbar {
-      display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;
-      margin-bottom:10px;
+
+    .scanner-sub {
+      margin-top:10px;
+      color:var(--muted);
+      font-size:13px;
     }
+
     #reader {
-      width: 100%;
-      max-width: 420px;
-      margin: 16px auto 0 auto;
-      overflow: hidden;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #000;
+      width:100%;
+      max-width:460px;
+      margin:16px auto 0 auto;
+      overflow:hidden;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background:#000;
     }
+
+    .pill {
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      background:#dbeafe;
+      color:#1e40af;
+    }
+
+    .pill.pendiente {
+      background:#fef3c7;
+      color:#92400e;
+    }
+
+    .pill.enviado {
+      background:#dcfce7;
+      color:#166534;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      margin-top:12px;
+      font-size:14px;
+    }
+
+    th, td {
+      border-bottom:1px solid var(--border);
+      padding:12px 8px;
+      text-align:left;
+      vertical-align:top;
+    }
+
+    th {
+      color:#374151;
+      font-size:13px;
+    }
+
+    .session-box {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .section-title {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
+    }
+
+    .section-title h2 {
+      margin:0;
+    }
+
+    .compact-note {
+      margin-top:10px;
+      background:#f8fafc;
+      border:1px solid var(--border);
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
     @media (max-width:640px) {
-      .grid { grid-template-columns:1fr; }
-      body { padding:12px; }
-      .scanner-code { font-size:22px; }
+      body { padding:10px; }
+
+      .app-header-inner {
+        padding:12px 14px;
+        border-radius:16px;
+      }
+
+      .brand-title {
+        font-size:18px;
+      }
+
+      .grid,
+      .session-box {
+        grid-template-columns:1fr;
+      }
+
+      .card {
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .actions {
+        flex-direction:column;
+      }
+
+      .actions button {
+        width:100%;
+      }
+
+      .scanner-code {
+        font-size:22px;
+      }
+
+      table, thead, tbody, th, td, tr {
+        display:block;
+        width:100%;
+      }
+
+      thead {
+        display:none;
+      }
+
+      tbody tr {
+        border:1px solid var(--border);
+        border-radius:16px;
+        background:#fff;
+        margin-bottom:12px;
+        padding:10px 12px;
+        box-shadow:0 4px 10px rgba(0,0,0,.03);
+      }
+
+      tbody td {
+        border:none;
+        padding:6px 0;
+      }
+
+      tbody td::before {
+        content: attr(data-label);
+        display:block;
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.05em;
+        color:var(--muted);
+        margin-bottom:3px;
+        font-weight:700;
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <section id="pantallaLogin" class="card">
-      <h1>Acceso a rondas</h1>
-      <p class="small">Ingresa la contraseña general para usar el sistema. Esta versión ya trabaja desde dentro de la app web.</p>
+
+    <div class="app-header">
+      <div class="app-header-inner">
+        <div>
+          <div class="brand-title">Sistema de Rondas</div>
+          <div class="brand-subtitle">Control de recorridos, ubicación y sincronización</div>
+        </div>
+      </div>
+    </div>
+
+    <section id="pantallaLogin" class="card login-card">
+      <h1 class="login-title">Acceso al sistema</h1>
+      <p class="small login-subtitle">
+        Ingresa la contraseña general, tu nombre y el área de trabajo para iniciar la ronda.
+      </p>
+
       <div class="field" style="margin-top:14px;">
         <div class="label">Contraseña general</div>
         <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
       </div>
-      <div class="actions">
-        <button id="btnIngresar" class="primary">Ingresar</button>
+
+      <div class="field" style="margin-top:12px;">
+        <div class="label">Nombre del colaborador</div>
+        <input id="nombreInput" type="text" placeholder="Ejemplo: Juan Pérez" autocomplete="name">
       </div>
+
+      <div class="field" style="margin-top:12px;">
+        <div class="label">Área de trabajo</div>
+        <input id="areaInput" type="text" placeholder="Ejemplo: Seguridad / Planta / Bodega">
+      </div>
+
+      <div class="actions">
+        <button id="btnIngresar" class="primary btn-block">Ingresar</button>
+      </div>
+
       <div id="mensajeLogin"></div>
     </section>
 
     <section id="pantallaApp" class="hidden">
+
       <div class="card">
-        <div class="topbar">
+        <div class="section-title">
           <div>
-            <h1 style="margin-bottom:6px;">Sistema de rondas</h1>
-            <div class="small">Versión operativa con escaneo interno y descarga protegida.</div>
-            <div class="small">Sesión activa. Desde aquí se realizará el escaneo interno y el registro de puntos.</div>
+            <h1 style="margin-bottom:6px;">Panel principal</h1>
+            <div class="small">Vista limpia para operar desde celular sin perder la funcionalidad actual.</div>
           </div>
           <button id="btnCerrarSesion" class="danger">Cerrar sesión</button>
         </div>
 
-        <div class="grid">
-          <div class="field"><div class="label">Internet</div><div id="estadoConexion" class="value">-</div></div>
-          <div class="field"><div class="label">Fecha</div><div id="fechaActual" class="value">-</div></div>
-          <div class="field"><div class="label">Hora</div><div id="horaActual" class="value">-</div></div>
-          <div class="field"><div class="label">Ubicación</div><div id="ubicacion" class="value">Obteniendo ubicación...</div></div>
+        <div class="session-box">
+          <div class="field soft-blue">
+            <div class="label">Colaborador</div>
+            <div id="sesionNombre" class="value">-</div>
+          </div>
+          <div class="field soft-blue">
+            <div class="label">Área de trabajo</div>
+            <div id="sesionArea" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div class="field">
+            <div class="label">Internet</div>
+            <div id="estadoConexion" class="value">-</div>
+          </div>
+          <div class="field">
+            <div class="label">Hora</div>
+            <div id="horaActual" class="value">-</div>
+          </div>
+          <div class="field">
+            <div class="label">Fecha</div>
+            <div id="fechaActual" class="value">-</div>
+          </div>
+          <div class="field soft-green">
+            <div class="label">Ubicación</div>
+            <div id="ubicacion" class="value">Obteniendo ubicación...</div>
+          </div>
         </div>
 
         <div class="actions">
           <button id="btnEscanear" class="primary">Escanear punto</button>
-          <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
-          <button id="btnDescargarDatos" class="secondary">Descargar datos</button>
-          <button id="btnEliminarRegistros" class="danger">Eliminar registros</button>
+          <button id="btnSincronizar" class="secondary">Sincronizar</button>
+          <button id="btnDescargarDatos" class="success">Descargar</button>
+          <button id="btnEliminarRegistros" class="danger">Eliminar</button>
         </div>
-        <div class="small" style="margin-top:10px;">La descarga solo incluye: punto, fecha, hora y ubicación.</div>
+
+        <div class="compact-note">
+          La descarga ahora puede incluir: nombre, área, punto, fecha, hora, ubicación, precisión y link del mapa.
+        </div>
+
         <div id="mensajeGeneral"></div>
       </div>
 
       <div class="card hidden" id="panelEscaner">
-        <h2>Escaneo interno</h2>
-        <p class="small">Presiona escanear y apunta la cámara al QR del punto. El QR debe contener solo el código, por ejemplo: PUNTO-001.</p>
+        <div class="section-title">
+          <div>
+            <h2>Sección de escaneo</h2>
+            <div class="small">Apunta la cámara al QR del punto. El código debe venir como PUNTO-001, PUNTO-002, etc.</div>
+          </div>
+        </div>
+
         <div class="scanner-box">
-          <div class="label" style="margin-bottom:10px;">Código detectado</div>
+          <div class="label" style="margin-bottom:10px;">Punto detectado</div>
           <div id="codigoLeidoVista" class="scanner-code">SIN CÓDIGO</div>
-          <div class="small" style="margin-top:10px;">Ejemplos válidos: PUNTO-001, PUNTO-002, PUNTO-003</div>
+          <div class="scanner-sub">Al detectar un punto válido, podrás registrarlo de inmediato.</div>
         </div>
 
         <div id="reader"></div>
@@ -124,22 +537,35 @@
         <div class="actions">
           <button id="btnIniciarCamara" class="primary">Iniciar cámara</button>
           <button id="btnDetenerCamara" class="secondary">Detener cámara</button>
-          <button id="btnRegistrarPunto" class="secondary">Registrar punto</button>
+          <button id="btnRegistrarPunto" class="success">Registrar punto</button>
         </div>
+
         <div id="mensajeEscaner"></div>
       </div>
 
       <div class="card">
-        <h2>Pendientes guardados</h2>
-        <p class="small">Estos registros quedan almacenados en el navegador mientras no haya internet o mientras no se logren sincronizar.</p>
+        <div class="section-title">
+          <div>
+            <h2>Pendientes guardados</h2>
+            <div class="small">En celular se muestran de forma más cómoda para lectura rápida.</div>
+          </div>
+        </div>
+
         <div id="resumenPendientes" class="small">0 registros pendientes</div>
+
         <table>
           <thead>
-            <tr><th>Punto</th><th>Fecha y hora</th><th>Estado</th></tr>
+            <tr>
+              <th>Punto</th>
+              <th>Fecha y hora</th>
+              <th>Colaborador</th>
+              <th>Estado</th>
+            </tr>
           </thead>
           <tbody id="tablaPendientes"></tbody>
         </table>
       </div>
+
     </section>
   </div>
 
@@ -170,6 +596,7 @@
     const CONTRASENA_GENERAL = 'Rondas2026';
     const CONTRASENA_DESCARGA = 'Seguridad502';
     const CONTRASENA_ELIMINAR = 'Eliminar502';
+
     const SESSION_KEY = 'rondas_sesion_activa';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
@@ -181,29 +608,39 @@
       'PUNTO-004': 'Gasolinera',
       'PUNTO-005': 'Almacen',
       'PUNTO-006': 'Garita',
-      'PUNTO-007': 'Frente Oficinas Señorial',
-      'PUNTO-008': 'Parqueo Señorial',
+      'PUNTO-007': 'Frente Oficinas',
+      'PUNTO-008': 'Parqueo',
       'PUNTO-009': 'Orilla Del Rio Poza',
-      'PUNTO-010': 'Esquina Parqueo Rutas',
+      'PUNTO-010': 'Esquina Parqueo',
       'PUNTO-011': 'Frente A Colonia Esquina Parqueo Motos',
-      'PUNTO-012': 'Parqueo Señorial Orilla Del Rio Poza'
-      
+      'PUNTO-012': 'Parqueo S Orilla Del Rio Poza'
     };
 
     const pantallaLogin = document.getElementById('pantallaLogin');
     const pantallaApp = document.getElementById('pantallaApp');
     const panelEscaner = document.getElementById('panelEscaner');
+
     const passwordInput = document.getElementById('passwordInput');
+    const nombreInput = document.getElementById('nombreInput');
+    const areaInput = document.getElementById('areaInput');
+
     const mensajeLogin = document.getElementById('mensajeLogin');
     const mensajeGeneral = document.getElementById('mensajeGeneral');
     const mensajeEscaner = document.getElementById('mensajeEscaner');
+
     const codigoLeidoVista = document.getElementById('codigoLeidoVista');
+
     const elConexion = document.getElementById('estadoConexion');
     const elFecha = document.getElementById('fechaActual');
     const elHora = document.getElementById('horaActual');
     const elUbicacion = document.getElementById('ubicacion');
+
     const elTabla = document.getElementById('tablaPendientes');
     const elResumen = document.getElementById('resumenPendientes');
+
+    const elSesionNombre = document.getElementById('sesionNombre');
+    const elSesionArea = document.getElementById('sesionArea');
+
     const btnDescargarDatos = document.getElementById('btnDescargarDatos');
     const btnEliminarRegistros = document.getElementById('btnEliminarRegistros');
 
@@ -224,6 +661,11 @@
 
     function actualizarConexion() {
       elConexion.textContent = navigator.onLine ? 'Con conexión' : 'Sin conexión';
+    }
+
+    function generarLinkMapa(latitud, longitud) {
+      if (latitud == null || longitud == null) return '';
+      return `https://www.google.com/maps?q=${latitud},${longitud}`;
     }
 
     function capturarUbicacion() {
@@ -251,6 +693,24 @@
       );
     }
 
+    function leerSesion() {
+      try {
+        return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+      } catch {
+        return null;
+      }
+    }
+
+    function guardarSesion(data) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    }
+
+    function pintarSesion() {
+      const sesion = leerSesion();
+      elSesionNombre.textContent = sesion?.nombre || '-';
+      elSesionArea.textContent = sesion?.area || '-';
+    }
+
     function leerPendientes() {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     }
@@ -274,16 +734,30 @@
       elTabla.innerHTML = '';
 
       if (!pendientes.length) {
-        elTabla.innerHTML = '<tr><td colspan="3">No hay registros pendientes.</td></tr>';
+        elTabla.innerHTML = '<tr><td colspan="4">No hay registros pendientes.</td></tr>';
         return;
       }
 
       pendientes.slice().reverse().forEach(item => {
         const tr = document.createElement('tr');
+        const estadoClass = item.estado === 'Enviado' ? 'enviado' : 'pendiente';
+
         tr.innerHTML = `
-          <td><strong>${item.nombrePunto}</strong><br><span class="small">${item.codigoPunto}</span></td>
-          <td>${item.fecha} ${item.hora}</td>
-          <td><span class="pill">${item.estado}</span></td>
+          <td data-label="Punto">
+            <strong>${item.nombrePunto}</strong><br>
+            <span class="small">${item.codigoPunto}</span>
+          </td>
+          <td data-label="Fecha y hora">
+            ${item.fecha}<br>
+            <span class="small">${item.hora}</span>
+          </td>
+          <td data-label="Colaborador">
+            <strong>${item.nombre || '-'}</strong><br>
+            <span class="small">${item.area || '-'}</span>
+          </td>
+          <td data-label="Estado">
+            <span class="pill ${estadoClass}">${item.estado}</span>
+          </td>
         `;
         elTabla.appendChild(tr);
       });
@@ -292,6 +766,7 @@
     function abrirApp() {
       pantallaLogin.classList.add('hidden');
       pantallaApp.classList.remove('hidden');
+      pintarSesion();
       actualizarFechaHora();
       actualizarConexion();
       capturarUbicacion();
@@ -314,25 +789,48 @@
     function cerrarSesion() {
       detenerCamara();
       localStorage.removeItem(SESSION_KEY);
+
       pantallaApp.classList.add('hidden');
       pantallaLogin.classList.remove('hidden');
       panelEscaner.classList.add('hidden');
+
       passwordInput.value = '';
+      nombreInput.value = '';
+      areaInput.value = '';
+
       codigoEscaneadoActual = '';
       codigoLeidoVista.textContent = 'SIN CÓDIGO';
       mensajeGeneral.innerHTML = '';
       mensajeEscaner.innerHTML = '';
+      mensajeLogin.innerHTML = '';
     }
 
     function iniciarSesion() {
       const clave = passwordInput.value.trim();
+      const nombre = nombreInput.value.trim();
+      const area = areaInput.value.trim();
 
       if (clave !== CONTRASENA_GENERAL) {
         mostrarMensaje(mensajeLogin, 'Contraseña incorrecta.', 'error');
         return;
       }
 
-      localStorage.setItem(SESSION_KEY, 'true');
+      if (!nombre) {
+        mostrarMensaje(mensajeLogin, 'Debes ingresar el nombre del colaborador.', 'error');
+        return;
+      }
+
+      if (!area) {
+        mostrarMensaje(mensajeLogin, 'Debes ingresar el área de trabajo.', 'error');
+        return;
+      }
+
+      guardarSesion({
+        activa: true,
+        nombre,
+        area
+      });
+
       mensajeLogin.innerHTML = '';
       abrirApp();
     }
@@ -393,6 +891,8 @@
       if (!navigator.onLine) throw new Error('Sin internet');
 
       const ref = await addDoc(collection(db, 'rondas'), {
+        nombre: registro.nombre,
+        area: registro.area,
         codigoPunto: registro.codigoPunto,
         nombrePunto: registro.nombrePunto,
         fecha: registro.fecha,
@@ -401,6 +901,7 @@
         latitud: registro.latitud,
         longitud: registro.longitud,
         precision: registro.precision,
+        linkMapa: registro.linkMapa || '',
         ubicacionError: registro.ubicacionError || null,
         estado: 'Enviado'
       });
@@ -413,15 +914,26 @@
 
     async function registrarPuntoEscaneado() {
       actualizarFechaHora();
+      capturarUbicacion();
 
       if (!codigoEscaneadoActual) {
         mostrarMensaje(mensajeEscaner, 'Primero debes escanear un código válido.', 'error');
         return;
       }
 
+      const sesion = leerSesion();
+
+      if (!sesion?.nombre || !sesion?.area) {
+        mostrarMensaje(mensajeEscaner, 'No se encontró la sesión del colaborador. Vuelve a ingresar.', 'error');
+        return;
+      }
+
       const ahora = new Date();
+
       const registro = {
         id: crypto.randomUUID(),
+        nombre: sesion.nombre,
+        area: sesion.area,
         codigoPunto: codigoEscaneadoActual,
         nombrePunto: PUNTOS[codigoEscaneadoActual],
         fecha: ahora.toLocaleDateString('es-GT'),
@@ -430,6 +942,7 @@
         latitud: ultimaUbicacion.latitud,
         longitud: ultimaUbicacion.longitud,
         precision: ultimaUbicacion.precision,
+        linkMapa: generarLinkMapa(ultimaUbicacion.latitud, ultimaUbicacion.longitud),
         ubicacionError: ultimaUbicacion.error,
         estado: 'Pendiente'
       };
@@ -463,6 +976,7 @@
       }
 
       const restantes = [];
+
       for (const item of pendientes) {
         try {
           await enviarRegistro(item);
@@ -503,10 +1017,14 @@
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
           filas.push({
+            nombre: item.nombre || '',
+            area: item.area || '',
             punto: item.nombrePunto || item.codigoPunto || '',
             fecha: item.fecha || '',
             hora: item.hora || '',
-            ubicacion: `${item.latitud ?? ''}, ${item.longitud ?? ''}`
+            ubicacion: `${item.latitud ?? ''}, ${item.longitud ?? ''}`,
+            precision: item.precision ?? '',
+            linkMapa: item.linkMapa || generarLinkMapa(item.latitud, item.longitud)
           });
         });
 
@@ -516,16 +1034,20 @@
           return aa.localeCompare(bb);
         });
 
-        const encabezados = ['Punto', 'Fecha', 'Hora', 'Ubicacion'];
+        const encabezados = ['Nombre', 'Área', 'Punto', 'Fecha', 'Hora', 'Ubicación', 'Precisión', 'Link mapa'];
         const separador = ';';
         const lineas = [encabezados.join(separador)];
 
         filas.forEach((fila) => {
           lineas.push([
+            escaparCsv(fila.nombre),
+            escaparCsv(fila.area),
             escaparCsv(fila.punto),
             escaparCsv(fila.fecha),
             escaparCsv(fila.hora),
-            escaparCsv(fila.ubicacion)
+            escaparCsv(fila.ubicacion),
+            escaparCsv(fila.precision),
+            escaparCsv(fila.linkMapa)
           ].join(separador));
         });
 
@@ -537,7 +1059,7 @@
         a.click();
         URL.revokeObjectURL(url);
 
-        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente en formato tabla CSV.', 'ok');
+        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente en formato CSV.', 'ok');
       } catch (e) {
         console.error(e);
         mostrarMensaje(mensajeGeneral, `No se pudieron descargar los datos: ${e.message}`, 'error');
@@ -579,7 +1101,9 @@
     }
 
     function inicializar() {
-      if (localStorage.getItem(SESSION_KEY) === 'true') {
+      const sesion = leerSesion();
+
+      if (sesion?.activa) {
         abrirApp();
       }
 
@@ -591,11 +1115,15 @@
         actualizarConexion();
         sincronizarPendientes().catch(console.error);
       });
+
       window.addEventListener('offline', actualizarConexion);
 
       document.getElementById('btnIngresar').addEventListener('click', iniciarSesion);
-      passwordInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') iniciarSesion();
+
+      [passwordInput, nombreInput, areaInput].forEach(input => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') iniciarSesion();
+        });
       });
 
       document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
