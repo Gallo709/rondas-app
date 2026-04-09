@@ -17,11 +17,8 @@
       --error:#b91c1c;
       --border:#e5e7eb;
       --primary:#1d4ed8;
-      --primary-soft:#dbeafe;
       --success:#15803d;
-      --success-soft:#dcfce7;
       --danger:#dc2626;
-      --danger-soft:#fee2e2;
       --soft:#f8fafc;
       --shadow:0 10px 30px rgba(0,0,0,.06);
     }
@@ -214,7 +211,7 @@
       color:var(--error);
     }
 
-    input {
+    input, select {
       width:100%;
       padding:14px;
       border:1px solid var(--border);
@@ -224,7 +221,7 @@
       background:#fff;
     }
 
-    input:focus {
+    input:focus, select:focus {
       border-color:#93c5fd;
       box-shadow:0 0 0 3px rgba(59,130,246,.12);
     }
@@ -268,11 +265,6 @@
       border-radius:999px;
       font-size:12px;
       font-weight:800;
-      background:#dbeafe;
-      color:#1e40af;
-    }
-
-    .pill.pendiente {
       background:#fef3c7;
       color:#92400e;
     }
@@ -389,21 +381,24 @@
 
     <section id="pantallaLogin" class="card">
       <h1>Acceso a rondas</h1>
-      <p class="small">Ingresa la contraseña general, tu nombre y el área de trabajo para usar el sistema.</p>
+      <p class="small">Selecciona el tipo de acceso, ingresa la contraseña y escribe el nombre del colaborador.</p>
 
       <div class="field" style="margin-top:14px;">
-        <div class="label">Contraseña general</div>
+        <div class="label">Tipo de acceso</div>
+        <select id="tipoAccesoInput">
+          <option value="kenaf">Kenaf</option>
+          <option value="monitoreo">Monitoreo</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <div class="label">Contraseña</div>
         <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
       </div>
 
       <div class="field" style="margin-top:12px;">
         <div class="label">Nombre del colaborador</div>
         <input id="nombreInput" type="text" placeholder="Ejemplo: Juan Pérez" autocomplete="name">
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <div class="label">Área de trabajo</div>
-        <input id="areaInput" type="text" placeholder="Ejemplo: Seguridad / Planta / Bodega">
       </div>
 
       <div class="actions">
@@ -418,7 +413,7 @@
         <div class="topbar">
           <div>
             <h1 style="margin-bottom:6px;">Sistema de rondas</h1>
-            <div class="small">Versión mejorada visualmente, manteniendo el funcionamiento original del sistema.</div>
+            <div class="small">Versión con acceso por roles y validación segura desde Firebase.</div>
           </div>
           <button id="btnCerrarSesion" class="danger">Cerrar sesión</button>
         </div>
@@ -429,7 +424,7 @@
             <div id="sesionNombre" class="value">-</div>
           </div>
           <div class="field soft-blue">
-            <div class="label">Área de trabajo</div>
+            <div class="label">Área</div>
             <div id="sesionArea" class="value">-</div>
           </div>
         </div>
@@ -456,12 +451,12 @@
         <div class="actions">
           <button id="btnEscanear" class="primary">Escanear punto</button>
           <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
-          <button id="btnDescargarDatos" class="success">Descargar datos</button>
-          <button id="btnEliminarRegistros" class="danger">Eliminar registros</button>
+          <button id="btnDescargarDatos" class="success hidden">Descargar datos</button>
+          <button id="btnEliminarRegistros" class="danger hidden">Eliminar registros</button>
         </div>
 
         <div class="compact-note">
-          La descarga incluirá nombre, área, punto, fecha, hora, ubicación, precisión y link del mapa.
+          Kenaf solo puede registrar y sincronizar. Monitoreo puede descargar y eliminar.
         </div>
 
         <div id="mensajeGeneral"></div>
@@ -512,7 +507,23 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      setPersistence,
+      browserLocalPersistence,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      deleteDoc,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC0-BSg3qZda0gtZV11ADmhPpJTrYX_P5U",
@@ -523,7 +534,13 @@
       appId: "1:955004839797:web:ed74a5f86e60ba813a953c"
     };
 
+    const CUENTAS = {
+      kenaf: "kenaf@rondas.local",
+      monitoreo: "monitoreo@rondas.local"
+    };
+
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     if ('serviceWorker' in navigator) {
@@ -532,14 +549,7 @@
       });
     }
 
-    const CONTRASENA_GENERAL = 'Rondas2026';
-    const CONTRASENA_DESCARGA = 'Seguridad502';
-    const CONTRASENA_ELIMINAR = 'Eliminar502';
-
-    const SESSION_KEY = 'rondas_sesion_activa';
-    const SESSION_NOMBRE = 'rondas_nombre';
-    const SESSION_AREA = 'rondas_area';
-
+    const SESSION_NOMBRE = 'rondas_nombre_operador';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
 
@@ -550,10 +560,10 @@
       'PUNTO-004': 'Gasolinera',
       'PUNTO-005': 'Almacen',
       'PUNTO-006': 'Garita',
-      'PUNTO-007': 'Frente Oficinas ',
-      'PUNTO-008': 'Parqueo ',
+      'PUNTO-007': 'Frente Oficinas',
+      'PUNTO-008': 'Parqueo',
       'PUNTO-009': 'Orilla Del Rio Poza',
-      'PUNTO-010': 'Esquina Parqueo ',
+      'PUNTO-010': 'Esquina Parqueo',
       'PUNTO-011': 'Frente A Colonia Esquina Parqueo Motos',
       'PUNTO-012': 'Parqueo S Orilla Del Rio Poza'
     };
@@ -562,9 +572,9 @@
     const pantallaApp = document.getElementById('pantallaApp');
     const panelEscaner = document.getElementById('panelEscaner');
 
+    const tipoAccesoInput = document.getElementById('tipoAccesoInput');
     const passwordInput = document.getElementById('passwordInput');
     const nombreInput = document.getElementById('nombreInput');
-    const areaInput = document.getElementById('areaInput');
 
     const mensajeLogin = document.getElementById('mensajeLogin');
     const mensajeGeneral = document.getElementById('mensajeGeneral');
@@ -588,6 +598,9 @@
     let html5QrCode = null;
     let camaraActiva = false;
 
+    let usuarioActual = null;
+    let perfilActual = null;
+
     function mostrarMensaje(el, texto, tipo = 'ok') {
       el.innerHTML = `<div class="status ${tipo}">${texto}</div>`;
     }
@@ -607,9 +620,21 @@
       return `https://www.google.com/maps?q=${latitud},${longitud}`;
     }
 
-    function pintarSesion() {
-      elSesionNombre.textContent = localStorage.getItem(SESSION_NOMBRE) || '-';
-      elSesionArea.textContent = localStorage.getItem(SESSION_AREA) || '-';
+    function aplicarPermisosUI() {
+      const esAdmin = perfilActual?.rol === 'admin';
+      btnDescargarDatos.classList.toggle('hidden', !esAdmin);
+      btnEliminarRegistros.classList.toggle('hidden', !esAdmin);
+    }
+
+    async function cargarPerfilUsuario(uid) {
+      const ref = doc(db, 'usuarios', uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        throw new Error('No existe perfil de usuario.');
+      }
+
+      return snap.data();
     }
 
     function capturarUbicacion() {
@@ -679,7 +704,7 @@
             <span class="small">${item.area || '-'}</span>
           </td>
           <td data-label="Estado">
-            <span class="pill pendiente">${item.estado}</span>
+            <span class="pill">${item.estado}</span>
           </td>
         `;
         elTabla.appendChild(tr);
@@ -692,7 +717,9 @@
       actualizarFechaHora();
       actualizarConexion();
       capturarUbicacion();
-      pintarSesion();
+      elSesionNombre.textContent = localStorage.getItem(SESSION_NOMBRE) || '-';
+      elSesionArea.textContent = perfilActual?.area || '-';
+      aplicarPermisosUI();
       renderPendientes();
     }
 
@@ -709,11 +736,17 @@
       }
     }
 
-    function cerrarSesion() {
-      detenerCamara();
-      localStorage.removeItem(SESSION_KEY);
+    async function cerrarSesion() {
+      try {
+        await detenerCamara();
+        await signOut(auth);
+      } catch (e) {
+        console.error(e);
+      }
+
+      usuarioActual = null;
+      perfilActual = null;
       localStorage.removeItem(SESSION_NOMBRE);
-      localStorage.removeItem(SESSION_AREA);
 
       pantallaApp.classList.add('hidden');
       pantallaLogin.classList.remove('hidden');
@@ -721,7 +754,6 @@
 
       passwordInput.value = '';
       nombreInput.value = '';
-      areaInput.value = '';
       codigoEscaneadoActual = '';
       codigoLeidoVista.textContent = 'SIN CÓDIGO';
       mensajeGeneral.innerHTML = '';
@@ -729,13 +761,14 @@
       mensajeLogin.innerHTML = '';
     }
 
-    function iniciarSesion() {
-      const clave = passwordInput.value.trim();
+    async function iniciarSesion() {
+      const tipo = tipoAccesoInput.value;
+      const email = CUENTAS[tipo];
+      const password = passwordInput.value.trim();
       const nombre = nombreInput.value.trim();
-      const area = areaInput.value.trim();
 
-      if (clave !== CONTRASENA_GENERAL) {
-        mostrarMensaje(mensajeLogin, 'Contraseña incorrecta.', 'error');
+      if (!password) {
+        mostrarMensaje(mensajeLogin, 'Debes ingresar la contraseña.', 'error');
         return;
       }
 
@@ -744,17 +777,26 @@
         return;
       }
 
-      if (!area) {
-        mostrarMensaje(mensajeLogin, 'Debes ingresar el área de trabajo.', 'error');
-        return;
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+
+        usuarioActual = cred.user;
+        perfilActual = await cargarPerfilUsuario(usuarioActual.uid);
+
+        if (perfilActual?.activo !== true) {
+          await signOut(auth);
+          throw new Error('Usuario inactivo.');
+        }
+
+        localStorage.setItem(SESSION_NOMBRE, nombre);
+
+        mensajeLogin.innerHTML = '';
+        abrirApp();
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeLogin, `No se pudo iniciar sesión: ${e.message}`, 'error');
       }
-
-      localStorage.setItem(SESSION_KEY, 'true');
-      localStorage.setItem(SESSION_NOMBRE, nombre);
-      localStorage.setItem(SESSION_AREA, area);
-
-      mensajeLogin.innerHTML = '';
-      abrirApp();
     }
 
     function activarEscaner() {
@@ -811,6 +853,7 @@
 
     async function enviarRegistro(registro) {
       if (!navigator.onLine) throw new Error('Sin internet');
+      if (!usuarioActual) throw new Error('Sesión no válida');
 
       const ref = await addDoc(collection(db, 'rondas'), {
         nombre: registro.nombre,
@@ -846,7 +889,7 @@
       const registro = {
         id: crypto.randomUUID(),
         nombre: localStorage.getItem(SESSION_NOMBRE) || '',
-        area: localStorage.getItem(SESSION_AREA) || '',
+        area: perfilActual?.area || '',
         codigoPunto: codigoEscaneadoActual,
         nombrePunto: PUNTOS[codigoEscaneadoActual],
         fecha: ahora.toLocaleDateString('es-GT'),
@@ -889,6 +932,7 @@
       }
 
       const restantes = [];
+
       for (const item of pendientes) {
         try {
           await enviarRegistro(item);
@@ -913,11 +957,8 @@
     }
 
     async function descargarDatos() {
-      const clave = prompt('Ingresa la contraseña de descarga:');
-      if (clave === null) return;
-
-      if (clave !== CONTRASENA_DESCARGA) {
-        mostrarMensaje(mensajeGeneral, 'Contraseña de descarga incorrecta.', 'error');
+      if (perfilActual?.rol !== 'admin') {
+        mostrarMensaje(mensajeGeneral, 'No tienes permiso para descargar.', 'error');
         return;
       }
 
@@ -970,7 +1011,7 @@
         a.click();
         URL.revokeObjectURL(url);
 
-        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente en formato tabla CSV.', 'ok');
+        mostrarMensaje(mensajeGeneral, 'Datos descargados correctamente en formato CSV.', 'ok');
       } catch (e) {
         console.error(e);
         mostrarMensaje(mensajeGeneral, `No se pudieron descargar los datos: ${e.message}`, 'error');
@@ -978,11 +1019,8 @@
     }
 
     async function eliminarRegistros() {
-      const clave = prompt('Ingresa la contraseña para eliminar registros:');
-      if (clave === null) return;
-
-      if (clave !== CONTRASENA_ELIMINAR) {
-        mostrarMensaje(mensajeGeneral, 'Contraseña para eliminar incorrecta.', 'error');
+      if (perfilActual?.rol !== 'admin') {
+        mostrarMensaje(mensajeGeneral, 'No tienes permiso para eliminar.', 'error');
         return;
       }
 
@@ -1011,13 +1049,29 @@
     }
 
     function inicializar() {
-      if (localStorage.getItem(SESSION_KEY) === 'true') {
-        abrirApp();
-      }
-
       actualizarFechaHora();
       setInterval(actualizarFechaHora, 1000);
       renderPendientes();
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          usuarioActual = null;
+          perfilActual = null;
+          pantallaApp.classList.add('hidden');
+          pantallaLogin.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          usuarioActual = user;
+          perfilActual = await cargarPerfilUsuario(user.uid);
+          abrirApp();
+        } catch (e) {
+          console.error(e);
+          await signOut(auth);
+          mostrarMensaje(mensajeLogin, 'No se pudo cargar el perfil del usuario.', 'error');
+        }
+      });
 
       window.addEventListener('online', () => {
         actualizarConexion();
@@ -1028,7 +1082,7 @@
 
       document.getElementById('btnIngresar').addEventListener('click', iniciarSesion);
 
-      [passwordInput, nombreInput, areaInput].forEach(input => {
+      [passwordInput, nombreInput].forEach(input => {
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') iniciarSesion();
         });
