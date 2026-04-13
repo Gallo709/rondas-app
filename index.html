@@ -122,6 +122,10 @@
       border-color:#d1fae5;
     }
 
+    .field.soft-green .value {
+      color:#065f46;
+    }
+
     .label {
       font-size:11px;
       color:var(--muted);
@@ -296,6 +300,7 @@
       border-radius:18px;
       border:1px solid var(--border);
       background:#000;
+      min-height:260px;
     }
 
     .compact-note {
@@ -448,6 +453,28 @@
           </div>
         </div>
 
+        <div class="grid" style="margin-top:12px;">
+          <div class="field soft-green">
+            <div class="label">Enviados hoy</div>
+            <div id="totalEnviadosHoy" class="value">0</div>
+          </div>
+
+          <div class="field">
+            <div class="label">Pendientes</div>
+            <div id="totalPendientesVista" class="value">0</div>
+          </div>
+
+          <div class="field">
+            <div class="label">Último punto</div>
+            <div id="ultimoPuntoVista" class="value">Sin registros</div>
+          </div>
+
+          <div class="field">
+            <div class="label">Última sincronización</div>
+            <div id="ultimaSyncVista" class="value">Aún no realizada</div>
+          </div>
+        </div>
+
         <div class="actions">
           <button id="btnEscanear" class="primary">Escanear punto</button>
           <button id="btnSincronizar" class="secondary">Sincronizar pendientes</button>
@@ -552,6 +579,7 @@
     const SESSION_NOMBRE = 'rondas_nombre_operador';
     const STORAGE_KEY = 'rondas_pendientes';
     const STORAGE_SENT_KEY = 'rondas_enviadas';
+    const STORAGE_LAST_SYNC_KEY = 'rondas_ultima_sync';
 
     const PUNTOS = {
       'PUNTO-001': 'Cafetería',
@@ -565,7 +593,11 @@
       'PUNTO-009': 'Orilla Del Rio Poza',
       'PUNTO-010': 'Esquina Parqueo',
       'PUNTO-011': 'Frente A Colonia Esquina Parqueo Motos',
-      'PUNTO-012': 'Parqueo S Orilla Del Rio Poza'
+      'PUNTO-012': 'Parqueo S Orilla Del Rio Poza',
+      'PUNTO-013': 'Taller',
+      'PUNTO-014': 'Disponible 1',
+      'PUNTO-015': 'Disponible 2',
+      'PUNTO-016': 'Disponible 3',
     };
 
     const pantallaLogin = document.getElementById('pantallaLogin');
@@ -589,6 +621,11 @@
     const elResumen = document.getElementById('resumenPendientes');
     const elSesionNombre = document.getElementById('sesionNombre');
     const elSesionArea = document.getElementById('sesionArea');
+
+    const elTotalEnviadosHoy = document.getElementById('totalEnviadosHoy');
+    const elTotalPendientesVista = document.getElementById('totalPendientesVista');
+    const elUltimoPuntoVista = document.getElementById('ultimoPuntoVista');
+    const elUltimaSyncVista = document.getElementById('ultimaSyncVista');
 
     const btnDescargarDatos = document.getElementById('btnDescargarDatos');
     const btnEliminarRegistros = document.getElementById('btnEliminarRegistros');
@@ -655,11 +692,76 @@
           elUbicacion.textContent = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)} m)`;
         },
         err => {
-          ultimaUbicacion.error = `No se pudo obtener la ubicación: ${err.message}`;
+          ultimaUbicacion = {
+            latitud: null,
+            longitud: null,
+            precision: null,
+            error: `No se pudo obtener la ubicación: ${err.message}`
+          };
           elUbicacion.textContent = ultimaUbicacion.error;
         },
         { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
       );
+    }
+
+    function capturarUbicacionActual() {
+      return new Promise((resolve) => {
+        if (!('geolocation' in navigator)) {
+          ultimaUbicacion = {
+            latitud: null,
+            longitud: null,
+            precision: null,
+            error: 'Este navegador no soporta geolocalización'
+          };
+          elUbicacion.textContent = ultimaUbicacion.error;
+          resolve(ultimaUbicacion);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            ultimaUbicacion = {
+              latitud: pos.coords.latitude,
+              longitud: pos.coords.longitude,
+              precision: pos.coords.accuracy,
+              error: null
+            };
+            elUbicacion.textContent = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)} m)`;
+            resolve(ultimaUbicacion);
+          },
+          err => {
+            ultimaUbicacion = {
+              latitud: null,
+              longitud: null,
+              precision: null,
+              error: `No se pudo obtener la ubicación: ${err.message}`
+            };
+            elUbicacion.textContent = ultimaUbicacion.error;
+            resolve(ultimaUbicacion);
+          },
+          { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+        );
+      });
+    }
+
+    function reproducirBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(950, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.12);
+      } catch (e) {
+        console.error('No se pudo reproducir el sonido:', e);
+      }
     }
 
     function leerPendientes() {
@@ -669,6 +771,7 @@
     function guardarPendientes(data) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       renderPendientes();
+      actualizarResumenVisual();
     }
 
     function leerEnviados() {
@@ -677,6 +780,52 @@
 
     function guardarEnviados(data) {
       localStorage.setItem(STORAGE_SENT_KEY, JSON.stringify(data));
+      actualizarResumenVisual();
+    }
+
+    function guardarUltimaSync(fechaISO) {
+      localStorage.setItem(STORAGE_LAST_SYNC_KEY, fechaISO);
+    }
+
+    function leerUltimaSync() {
+      return localStorage.getItem(STORAGE_LAST_SYNC_KEY);
+    }
+
+    function esMismoDia(fechaISO) {
+      if (!fechaISO) return false;
+      const hoy = new Date();
+      const fecha = new Date(fechaISO);
+
+      return (
+        hoy.getFullYear() === fecha.getFullYear() &&
+        hoy.getMonth() === fecha.getMonth() &&
+        hoy.getDate() === fecha.getDate()
+      );
+    }
+
+    function actualizarResumenVisual() {
+      const pendientes = leerPendientes();
+      const enviados = leerEnviados();
+      const ultimaSync = leerUltimaSync();
+
+      const enviadosHoy = enviados.filter(item => esMismoDia(item.timestampISO)).length;
+
+      elTotalEnviadosHoy.textContent = enviadosHoy;
+      elTotalPendientesVista.textContent = pendientes.length;
+
+      const todos = [...pendientes, ...enviados].sort((a, b) => {
+        return new Date(b.timestampISO) - new Date(a.timestampISO);
+      });
+
+      if (todos.length) {
+        elUltimoPuntoVista.textContent = `${todos[0].codigoPunto} - ${todos[0].nombrePunto}`;
+      } else {
+        elUltimoPuntoVista.textContent = 'Sin registros';
+      }
+
+      elUltimaSyncVista.textContent = ultimaSync
+        ? new Date(ultimaSync).toLocaleString('es-GT')
+        : 'Aún no realizada';
     }
 
     function renderPendientes() {
@@ -686,6 +835,7 @@
 
       if (!pendientes.length) {
         elTabla.innerHTML = '<tr><td colspan="4">No hay registros pendientes.</td></tr>';
+        actualizarResumenVisual();
         return;
       }
 
@@ -709,6 +859,8 @@
         `;
         elTabla.appendChild(tr);
       });
+
+      actualizarResumenVisual();
     }
 
     function abrirApp() {
@@ -721,6 +873,7 @@
       elSesionArea.textContent = perfilActual?.area || '-';
       aplicarPermisosUI();
       renderPendientes();
+      actualizarResumenVisual();
     }
 
     async function detenerCamara() {
@@ -801,6 +954,8 @@
 
     function activarEscaner() {
       panelEscaner.classList.remove('hidden');
+      codigoEscaneadoActual = '';
+      codigoLeidoVista.textContent = 'SIN CÓDIGO';
       mostrarMensaje(mensajeEscaner, 'Presiona iniciar cámara y apunta al QR del punto.', 'ok');
     }
 
@@ -816,6 +971,12 @@
 
       codigoEscaneadoActual = codigo;
       codigoLeidoVista.textContent = `${codigo} - ${PUNTOS[codigo]}`;
+
+      if (navigator.vibrate) {
+        navigator.vibrate(150);
+      }
+
+      reproducirBeep();
       mostrarMensaje(mensajeEscaner, 'Código leído correctamente. Ya puedes registrar el punto.', 'ok');
     }
 
@@ -836,9 +997,9 @@
         await html5QrCode.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
+          async (decodedText) => {
             procesarCodigoLeido(decodedText);
-            detenerCamara();
+            await detenerCamara();
           },
           () => {}
         );
@@ -885,6 +1046,9 @@
         return;
       }
 
+      mostrarMensaje(mensajeEscaner, 'Actualizando ubicación antes de registrar...', 'warn');
+      await capturarUbicacionActual();
+
       const ahora = new Date();
       const registro = {
         id: crypto.randomUUID(),
@@ -911,6 +1075,9 @@
         await sincronizarPendientes();
         mostrarMensaje(mensajeGeneral, `Punto registrado correctamente: ${registro.nombrePunto}.`, 'ok');
         mostrarMensaje(mensajeEscaner, 'Escaneo registrado y sincronizado correctamente.', 'ok');
+
+        codigoEscaneadoActual = '';
+        codigoLeidoVista.textContent = 'SIN CÓDIGO';
       } catch (e) {
         console.error(e);
         mostrarMensaje(mensajeGeneral, `Registro guardado como pendiente. Error: ${e.message}`, 'warn');
@@ -945,8 +1112,10 @@
       guardarPendientes(restantes);
 
       if (restantes.length === 0) {
+        guardarUltimaSync(new Date().toISOString());
         mostrarMensaje(mensajeGeneral, 'Todos los registros pendientes fueron sincronizados.', 'ok');
       } else {
+        guardarUltimaSync(new Date().toISOString());
         throw new Error(`Quedaron pendientes: ${restantes.length}`);
       }
     }
@@ -1039,7 +1208,9 @@
 
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(STORAGE_SENT_KEY);
+        localStorage.removeItem(STORAGE_LAST_SYNC_KEY);
         renderPendientes();
+        actualizarResumenVisual();
 
         mostrarMensaje(mensajeGeneral, 'Todos los registros fueron eliminados correctamente.', 'ok');
       } catch (e) {
@@ -1052,6 +1223,7 @@
       actualizarFechaHora();
       setInterval(actualizarFechaHora, 1000);
       renderPendientes();
+      actualizarResumenVisual();
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
