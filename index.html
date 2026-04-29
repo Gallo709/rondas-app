@@ -230,6 +230,40 @@
       box-shadow:0 0 0 3px rgba(59,130,246,.12);
     }
 
+    .password-wrapper {
+      position:relative;
+      display:flex;
+      align-items:center;
+    }
+
+    .password-wrapper input {
+      padding-right:58px;
+    }
+
+    .toggle-password {
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      width:42px;
+      height:42px;
+      min-height:42px;
+      padding:0;
+      border-radius:12px;
+      background:#eef2f7;
+      color:#374151;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:none;
+    }
+
+    .toggle-password:hover {
+      transform:translateY(-50%);
+      background:#e5e7eb;
+    }
+
     .topbar {
       display:flex;
       justify-content:space-between;
@@ -398,7 +432,10 @@
 
       <div class="field" style="margin-top:12px;">
         <div class="label">Contraseña</div>
-        <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
+        <div class="password-wrapper">
+          <input id="passwordInput" type="password" placeholder="Ingresa la contraseña" autocomplete="current-password">
+          <button id="btnVerPassword" type="button" class="toggle-password" aria-label="Mostrar contraseña" title="Mostrar contraseña">👁️</button>
+        </div>
       </div>
 
       <div class="field" style="margin-top:12px;">
@@ -581,6 +618,12 @@
     const STORAGE_SENT_KEY = 'rondas_enviadas';
     const STORAGE_LAST_SYNC_KEY = 'rondas_ultima_sync';
 
+    const LOGIN_INTENTOS_KEY = 'rondas_intentos_login';
+    const LOGIN_BLOQUEO_KEY = 'rondas_bloqueo_login_hasta';
+    const MAX_INTENTOS_LOCALES = 3;
+    const TIEMPO_BLOQUEO_LOCAL = 5 * 60 * 1000;
+    const TIEMPO_BLOQUEO_FIREBASE = 30 * 60 * 1000;
+
     const PUNTOS = {
       'PUNTO-001': 'Cafetería',
       'PUNTO-002': 'Taller Racks',
@@ -588,16 +631,16 @@
       'PUNTO-004': 'Gasolinera',
       'PUNTO-005': 'Almacen',
       'PUNTO-006': 'Garita',
-      'PUNTO-007': 'Frente Oficinas',
-      'PUNTO-008': 'Parqueo',
+      'PUNTO-007': 'Frente Oficinas Señorial',
+      'PUNTO-008': 'Parqueo Señorial',
       'PUNTO-009': 'Orilla Del Rio Poza',
-      'PUNTO-010': 'Esquina Parqueo',
+      'PUNTO-010': 'Esquina Parqueo Rutas',
       'PUNTO-011': 'Frente A Colonia Esquina Parqueo Motos',
-      'PUNTO-012': 'Parqueo S Orilla Del Rio Poza',
+      'PUNTO-012': 'Parqueo Señorial Orilla Del Rio Poza',
       'PUNTO-013': 'Taller',
       'PUNTO-014': 'Disponible 1',
       'PUNTO-015': 'Disponible 2',
-      'PUNTO-016': 'Disponible 3',
+      'PUNTO-016': 'Disponible 3'
     };
 
     const pantallaLogin = document.getElementById('pantallaLogin');
@@ -607,6 +650,8 @@
     const tipoAccesoInput = document.getElementById('tipoAccesoInput');
     const passwordInput = document.getElementById('passwordInput');
     const nombreInput = document.getElementById('nombreInput');
+    const btnIngresar = document.getElementById('btnIngresar');
+    const btnVerPassword = document.getElementById('btnVerPassword');
 
     const mensajeLogin = document.getElementById('mensajeLogin');
     const mensajeGeneral = document.getElementById('mensajeGeneral');
@@ -906,15 +951,99 @@
       panelEscaner.classList.add('hidden');
 
       passwordInput.value = '';
+      passwordInput.type = 'password';
+      btnVerPassword.textContent = '👁️';
+      btnVerPassword.setAttribute('aria-label', 'Mostrar contraseña');
+      btnVerPassword.setAttribute('title', 'Mostrar contraseña');
+
       nombreInput.value = '';
       codigoEscaneadoActual = '';
       codigoLeidoVista.textContent = 'SIN CÓDIGO';
       mensajeGeneral.innerHTML = '';
       mensajeEscaner.innerHTML = '';
       mensajeLogin.innerHTML = '';
+      btnIngresar.disabled = false;
+      btnIngresar.textContent = 'Ingresar';
+    }
+
+    function obtenerIntentosLogin() {
+      return Number(localStorage.getItem(LOGIN_INTENTOS_KEY) || 0);
+    }
+
+    function guardarIntentosLogin(intentos) {
+      localStorage.setItem(LOGIN_INTENTOS_KEY, String(intentos));
+    }
+
+    function obtenerBloqueoLogin() {
+      return Number(localStorage.getItem(LOGIN_BLOQUEO_KEY) || 0);
+    }
+
+    function guardarBloqueoLogin(tiempo) {
+      localStorage.setItem(LOGIN_BLOQUEO_KEY, String(tiempo));
+    }
+
+    function limpiarBloqueoLogin() {
+      localStorage.removeItem(LOGIN_INTENTOS_KEY);
+      localStorage.removeItem(LOGIN_BLOQUEO_KEY);
+    }
+
+    function mostrarTiempoBloqueo() {
+      const bloqueoHasta = obtenerBloqueoLogin();
+
+      if (Date.now() < bloqueoHasta) {
+        const minutos = Math.ceil((bloqueoHasta - Date.now()) / 60000);
+        mostrarMensaje(
+          mensajeLogin,
+          `Acceso bloqueado temporalmente. Intente nuevamente en ${minutos} minuto(s).`,
+          'error'
+        );
+        return true;
+      }
+
+      return false;
+    }
+
+    function obtenerMensajeErrorLogin(e, intentos) {
+      if (e.code === 'auth/too-many-requests') {
+        guardarBloqueoLogin(Date.now() + TIEMPO_BLOQUEO_FIREBASE);
+        return 'Se detectaron demasiados intentos de inicio de sesión. Por seguridad, espere 30 minutos antes de volver a intentar.';
+      }
+
+      if (
+        e.code === 'auth/wrong-password' ||
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/user-not-found'
+      ) {
+        if (intentos >= MAX_INTENTOS_LOCALES) {
+          guardarBloqueoLogin(Date.now() + TIEMPO_BLOQUEO_LOCAL);
+          return 'Contraseña incorrecta. Acceso bloqueado por 5 minutos.';
+        }
+
+        return `Contraseña incorrecta. Intento ${intentos} de ${MAX_INTENTOS_LOCALES}.`;
+      }
+
+      if (e.message === 'Usuario inactivo.') {
+        return 'El usuario se encuentra inactivo. Comuníquese con el administrador.';
+      }
+
+      if (e.message === 'No existe perfil de usuario.') {
+        return 'El usuario no tiene perfil asignado en Firestore. Verifique el documento en la colección usuarios.';
+      }
+
+      if (!navigator.onLine) {
+        return 'No hay conexión a internet. Verifique la red e intente nuevamente.';
+      }
+
+      return 'No se pudo iniciar sesión. Verifique los datos ingresados.';
     }
 
     async function iniciarSesion() {
+      if (btnIngresar.disabled) return;
+
+      if (mostrarTiempoBloqueo()) {
+        return;
+      }
+
       const tipo = tipoAccesoInput.value;
       const email = CUENTAS[tipo];
       const password = passwordInput.value.trim();
@@ -930,6 +1059,10 @@
         return;
       }
 
+      btnIngresar.disabled = true;
+      btnIngresar.textContent = 'Validando...';
+      mostrarMensaje(mensajeLogin, 'Validando credenciales, por favor espere...', 'warn');
+
       try {
         await setPersistence(auth, browserLocalPersistence);
         const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -942,13 +1075,26 @@
           throw new Error('Usuario inactivo.');
         }
 
+        limpiarBloqueoLogin();
         localStorage.setItem(SESSION_NOMBRE, nombre);
 
         mensajeLogin.innerHTML = '';
         abrirApp();
+
       } catch (e) {
         console.error(e);
-        mostrarMensaje(mensajeLogin, `No se pudo iniciar sesión: ${e.message}`, 'error');
+
+        const intentos = obtenerIntentosLogin() + 1;
+        guardarIntentosLogin(intentos);
+
+        const mensaje = obtenerMensajeErrorLogin(e, intentos);
+        mostrarMensaje(mensajeLogin, mensaje, 'error');
+
+      } finally {
+        if (!pantallaLogin.classList.contains('hidden')) {
+          btnIngresar.disabled = false;
+          btnIngresar.textContent = 'Ingresar';
+        }
       }
     }
 
@@ -1219,11 +1365,25 @@
       }
     }
 
+    function alternarPassword() {
+      const visible = passwordInput.type === 'text';
+
+      passwordInput.type = visible ? 'password' : 'text';
+      btnVerPassword.textContent = visible ? '👁️' : '🙈';
+      btnVerPassword.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      btnVerPassword.setAttribute('title', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      passwordInput.focus();
+    }
+
     function inicializar() {
       actualizarFechaHora();
       setInterval(actualizarFechaHora, 1000);
       renderPendientes();
       actualizarResumenVisual();
+
+      if (mostrarTiempoBloqueo()) {
+        console.log('Login temporalmente bloqueado por seguridad.');
+      }
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -1252,11 +1412,14 @@
 
       window.addEventListener('offline', actualizarConexion);
 
-      document.getElementById('btnIngresar').addEventListener('click', iniciarSesion);
+      btnIngresar.addEventListener('click', iniciarSesion);
+      btnVerPassword.addEventListener('click', alternarPassword);
 
       [passwordInput, nombreInput].forEach(input => {
         input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') iniciarSesion();
+          if (e.key === 'Enter' && !btnIngresar.disabled) {
+            iniciarSesion();
+          }
         });
       });
 
