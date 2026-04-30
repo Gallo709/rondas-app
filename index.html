@@ -690,7 +690,12 @@
     function actualizarFechaHora() {
       const a = new Date();
       elFecha.textContent = a.toLocaleDateString('es-GT');
-      elHora.textContent = a.toLocaleTimeString('es-GT');
+      elHora.textContent = a.toLocaleTimeString('es-GT', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
     }
 
     function actualizarConexion() {
@@ -1203,7 +1208,12 @@
         codigoPunto: codigoEscaneadoActual,
         nombrePunto: PUNTOS[codigoEscaneadoActual],
         fecha: ahora.toLocaleDateString('es-GT'),
-        hora: ahora.toLocaleTimeString('es-GT'),
+        hora: ahora.toLocaleTimeString('es-GT', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
         timestampISO: ahora.toISOString(),
         latitud: ultimaUbicacion.latitud,
         longitud: ultimaUbicacion.longitud,
@@ -1289,6 +1299,7 @@
             punto: item.nombrePunto || item.codigoPunto || '',
             fecha: item.fecha || '',
             hora: item.hora || '',
+            timestampISO: item.timestampISO || '',
             ubicacion: `${item.latitud ?? ''}, ${item.longitud ?? ''}`,
             precision: item.precision ?? '',
             linkMapa: item.linkMapa || generarLinkMapa(item.latitud, item.longitud)
@@ -1296,9 +1307,7 @@
         });
 
         filas.sort((a, b) => {
-          const aa = `${a.fecha} ${a.hora}`;
-          const bb = `${b.fecha} ${b.hora}`;
-          return aa.localeCompare(bb);
+          return new Date(a.timestampISO) - new Date(b.timestampISO);
         });
 
         const encabezados = ['Nombre', 'Área', 'Punto', 'Fecha', 'Hora', 'Ubicación', 'Precisión', 'Link mapa'];
