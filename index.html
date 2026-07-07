@@ -622,6 +622,29 @@
     }
 
 
+    .export-panel {
+      background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);
+      border-left:5px solid var(--success);
+    }
+
+    .export-controls {
+      display:grid;
+      grid-template-columns:minmax(240px, 420px);
+      gap:12px;
+      margin-top:12px;
+    }
+
+    .pdf-area-field {
+      background:#f0fdf4;
+      border-color:#bbf7d0;
+    }
+
+    .btn-pdf-area {
+      background:#0f766e;
+      box-shadow:0 8px 18px rgba(15,118,110,.20);
+    }
+
+
     .login-card {
       max-width:560px;
       margin:34px auto 28px auto;
@@ -1169,8 +1192,10 @@
           <div class="label">Área de acceso</div>
           <select id="tipoAccesoInput">
             <option value="kenaf">Kenaf</option>
-            <option value="monitoreo">Monitoreo</option>
             <option value="botellon">Botellón</option>
+            <option value="b_nuevo_n">B Nuevo N</option>
+            <option value="almaguate">Almaguate</option>
+            <option value="monitoreo">Monitoreo</option>
           </select>
         </div>
 
@@ -1294,7 +1319,7 @@
         </div>
 
         <div class="compact-note">
-          Kenaf y Botellón pueden registrar y sincronizar. Monitoreo visualiza el reporte administrativo, descarga Excel y elimina registros únicamente cuando ya fueron respaldados.
+          Kenaf, Botellón, B Nuevo N y Almaguate pueden registrar y sincronizar. Monitoreo visualiza el reporte administrativo, descarga Excel, descarga PDF general o por área y elimina registros únicamente cuando ya fueron respaldados.
         </div>
 
         <div id="mensajeGeneral"></div>
@@ -1358,7 +1383,7 @@
         <div class="admin-panel-title">
           <div>
             <h2>Panel administrativo</h2>
-            <p class="small">Panel visual para supervisión: indicadores, gráficas, actividad por área, novedades, auditoría y exportación administrativa en Excel.</p>
+            <p class="small">Panel visual para supervisión: indicadores, gráficas, actividad por área, novedades y exportación administrativa en Excel o PDF.</p>
           </div>
           <span class="module-badge">Administración</span>
         </div>
@@ -1425,7 +1450,7 @@
         </div>
 
         <div class="compact-note system-note">
-          El reporte Excel genera una hoja de dashboard con gráficas como imágenes, resumen administrativo, actividad por área, novedades, auditoría y detalle completo.
+          Los reportes PDF generan un documento profesional con encabezados, resumen, gráficas y detalle completo. La bitácora de auditoría se omite del PDF para mantener el reporte limpio.
         </div>
 
         <div class="admin-table-wrap">
@@ -1463,29 +1488,29 @@
         </table>
         </div>
 
-        <div class="admin-table-wrap">
-          <h3 style="margin-top:0;">Bitácora de auditoría</h3>
-          <p class="small">Últimas acciones administrativas registradas localmente y, cuando hay conexión, también en Firestore.</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha y hora</th>
-                <th>Usuario</th>
-                <th>Acción</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody id="tablaAuditoria"></tbody>
-          </table>
+
+        <div class="admin-table-wrap export-panel">
+          <h3 style="margin-top:0;">Descarga de reportes PDF</h3>
+          <p class="small">Puede descargar un PDF general con todas las áreas o seleccionar un área específica para generar un reporte individual. Cada PDF incluye resumen, gráficas y registros agrupados por fecha.</p>
+          <div class="export-controls">
+            <div class="field pdf-area-field">
+              <div class="label">Área para PDF individual</div>
+              <select id="filtroAreaPdf">
+                <option value="">Seleccione un área</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div id="accionesAdmin" class="quick-actions admin-only danger-zone hidden">
           <div class="action-caption">
-            Acciones administrativas: actualiza las gráficas, descarga el Excel con dashboard y elimina registros solo después de confirmar que el respaldo fue generado correctamente.
+            Acciones administrativas: actualiza las gráficas, descarga Excel, descarga PDF general o por área y elimina registros solo después de confirmar que el respaldo fue generado correctamente.
           </div>
           <div class="action-group">
             <button id="btnActualizarReporte" class="secondary">Actualizar reporte</button>
             <button id="btnDescargarExcelPanel" class="success">Descargar Excel con gráficas</button>
+            <button id="btnDescargarPdfPanel" class="primary">Descargar PDF general</button>
+            <button id="btnDescargarPdfAreaPanel" class="primary btn-pdf-area">Descargar PDF por área</button>
             <button id="btnEliminarRegistros" class="btn-ghost-danger">Limpiar registros descargados</button>
           </div>
         </div>
@@ -1514,6 +1539,8 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1546,8 +1573,10 @@
 
     const CUENTAS = {
       kenaf: "kenaf@rondas.local",
-      monitoreo: "monitoreo@rondas.local",
-      botellon: "botellon@rondas.local"
+      botellon: "botellon@rondas.local",
+      b_nuevo_n: "b_nuevo_n@rondas.local",
+      almaguate: "almaguate@rondas.local",
+      monitoreo: "monitoreo@rondas.local"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -1589,8 +1618,34 @@
       'PUNTO-014': 'Almacen Corrugados',
       'PUNTO-015': 'Disponible 2',
       'PUNTO-016': 'Disponible 3',
-      'PUNTO-017': 'Botellón'
+      'PUNTO-017': 'Botellón',
+      'PUNTO-018': 'Disponible',
+      'PUNTO-019': 'Disponible',
+      'PUNTO-020': 'Disponible',
+      'PUNTO-021': 'Disponible',
+      'PUNTO-022': 'Disponible',
+      'PUNTO-023': 'Disponible',
+      'PUNTO-024': 'Disponible',
+      'PUNTO-025': 'Disponible',
+      'PUNTO-026': 'Disponible',
+      'PUNTO-027': 'Disponible',
+      'PUNTO-028': 'Disponible',
+      'PUNTO-029': 'Disponible',
+      'PUNTO-030': 'Disponible',
+      'PUNTO-031': 'Disponible',
+      'PUNTO-032': 'Disponible',
+      'PUNTO-033': 'Disponible',
+      'PUNTO-034': 'Disponible',
+      'PUNTO-035': 'Disponible',
+      'PUNTO-036': 'Disponible',
+      'PUNTO-037': 'Disponible',
+      'PUNTO-038': 'Disponible',
+      'PUNTO-039': 'Disponible',
+      'PUNTO-040': 'Disponible',
+      'PUNTO-041': 'Disponible'
     };
+
+    const AREAS_SISTEMA = ['Kenaf', 'Botellón', 'B Nuevo N', 'Almaguate'];
 
     const pantallaLogin = document.getElementById('pantallaLogin');
     const pantallaApp = document.getElementById('pantallaApp');
@@ -1623,6 +1678,9 @@
     const elUltimaSyncVista = document.getElementById('ultimaSyncVista');
 
     const btnDescargarExcelPanel = document.getElementById('btnDescargarExcelPanel');
+    const btnDescargarPdfPanel = document.getElementById('btnDescargarPdfPanel');
+    const btnDescargarPdfAreaPanel = document.getElementById('btnDescargarPdfAreaPanel');
+    const filtroAreaPdf = document.getElementById('filtroAreaPdf');
     const btnEliminarRegistros = document.getElementById('btnEliminarRegistros');
     const accionesOperador = document.getElementById('accionesOperador');
     const accionesAdmin = document.getElementById('accionesAdmin');
@@ -2661,6 +2719,7 @@
 
         renderTablaActividadArea(filas);
         renderTablaAuditoriaLocal();
+        actualizarSelectorAreaPdf(filas);
 
         crearGrafica('chartAreas', 'bar', ordenarConteo(contarPorCampo(filas, 'area')));
         crearGrafica('chartEstados', 'doughnut', ordenarConteo(contarPorCampo(filas, 'estadoOperativo')));
@@ -3210,6 +3269,469 @@ ${valor}`;
       }
     }
 
+
+    function textoPdf(valor, maximo = 0) {
+      const texto = String(valor ?? '').replace(/\s+/g, ' ').trim();
+      if (!texto) return '-';
+      return maximo && texto.length > maximo ? `${texto.slice(0, maximo - 3)}...` : texto;
+    }
+
+    function normalizarNombreArchivo(valor) {
+      return String(valor || 'reporte')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .toLowerCase() || 'reporte';
+    }
+
+    function normalizarClaveArea(valor) {
+      return String(valor || '').trim().toLocaleLowerCase('es-GT');
+    }
+
+    function obtenerAreasDisponibles(filas = []) {
+      const ordenBase = AREAS_SISTEMA.slice();
+      const set = new Set(ordenBase);
+      filas.forEach(fila => {
+        const area = String(fila.area || '').trim();
+        if (area && normalizarClaveArea(area) !== 'monitoreo') set.add(area);
+      });
+
+      return Array.from(set).sort((a, b) => {
+        const ia = ordenBase.findIndex(x => normalizarClaveArea(x) === normalizarClaveArea(a));
+        const ib = ordenBase.findIndex(x => normalizarClaveArea(x) === normalizarClaveArea(b));
+        if (ia !== -1 || ib !== -1) {
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        }
+        return a.localeCompare(b, 'es-GT');
+      });
+    }
+
+    function actualizarSelectorAreaPdf(filas = []) {
+      if (!filtroAreaPdf) return;
+
+      const seleccionActual = filtroAreaPdf.value;
+      const areas = obtenerAreasDisponibles(filas);
+      filtroAreaPdf.innerHTML = '<option value="">Seleccione un área</option>';
+
+      areas.forEach(area => {
+        const total = filas.filter(fila => normalizarClaveArea(fila.area) === normalizarClaveArea(area)).length;
+        const option = document.createElement('option');
+        option.value = area;
+        option.textContent = total ? `${area} (${total} registro(s))` : `${area} (sin registros)`;
+        filtroAreaPdf.appendChild(option);
+      });
+
+      if (areas.some(area => normalizarClaveArea(area) === normalizarClaveArea(seleccionActual))) {
+        filtroAreaPdf.value = seleccionActual;
+      }
+    }
+
+    function filtrarRegistrosPorArea(filas, area) {
+      const areaClave = normalizarClaveArea(area);
+      return filas.filter(fila => normalizarClaveArea(fila.area) === areaClave);
+    }
+
+    function ordenarFilasReporte(filas) {
+      return filas.slice().sort((a, b) => {
+        const ta = new Date(a.timestampISO).getTime();
+        const tb = new Date(b.timestampISO).getTime();
+        if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) return ta - tb;
+        return `${a.fecha || ''} ${a.hora || ''}`.localeCompare(`${b.fecha || ''} ${b.hora || ''}`, 'es-GT');
+      });
+    }
+
+    function crearFilasDetallePdf(filas) {
+      const filasOrdenadas = ordenarFilasReporte(filas);
+      if (!filasOrdenadas.length) {
+        return [['Sin registros disponibles', '', '', '', '', '', '', '', '']];
+      }
+
+      const body = [];
+      let fechaActual = null;
+
+      filasOrdenadas.forEach(fila => {
+        const fecha = textoPdf(fila.fecha || (fila.timestampISO ? new Date(fila.timestampISO).toLocaleDateString('es-GT') : 'Sin fecha'), 18);
+        if (fecha !== fechaActual) {
+          fechaActual = fecha;
+          body.push([{
+            content: `FECHA: ${fechaActual}`,
+            colSpan: 9,
+            styles: {
+              fillColor: [220, 252, 231],
+              textColor: [22, 101, 52],
+              fontStyle: 'bold',
+              halign: 'left',
+              fontSize: 7.2,
+              cellPadding: 2.2
+            }
+          }]);
+        }
+
+        body.push([
+          textoPdf(fila.nombre, 32),
+          textoPdf(fila.area, 20),
+          textoPdf(fila.nombrePunto || fila.codigoPunto, 38),
+          textoPdf(fecha, 14),
+          textoPdf(fila.hora, 12),
+          textoPdf(fila.estadoOperativo, 18),
+          textoPdf(fila.observacion || 'Área verificada sin novedad.', 70),
+          textoPdf(fila.ubicacion, 35),
+          textoPdf(fila.precision, 12)
+        ]);
+      });
+
+      return body;
+    }
+
+    function agregarEncabezadoPiePdf(doc, fechaDescarga, generadoPor, tituloReporte = 'REPORTE ADMINISTRATIVO DE RONDAS') {
+      const totalPaginas = doc.internal.getNumberOfPages();
+
+      for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        doc.setPage(pagina);
+        const ancho = doc.internal.pageSize.getWidth();
+        const alto = doc.internal.pageSize.getHeight();
+
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, ancho, 18, 'F');
+        doc.setDrawColor(22, 163, 74);
+        doc.setLineWidth(0.9);
+        doc.line(0, 18, ancho, 18);
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(tituloReporte, 12, 7);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.text(`Generado: ${fechaDescarga} | Usuario: ${generadoPor}`, 12, 12.5);
+        doc.text('Documento de control interno', ancho - 58, 12.5);
+
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.2);
+        doc.line(12, alto - 12, ancho - 12, alto - 12);
+        doc.setTextColor(100, 116, 139);
+        doc.setFontSize(7);
+        doc.text('Sistema de Rondas | Reporte generado automáticamente', 12, alto - 7);
+        doc.text(`Página ${pagina} de ${totalPaginas}`, ancho - 33, alto - 7);
+      }
+    }
+
+    function agregarTituloSeccionPdf(doc, titulo, y) {
+      const ancho = doc.internal.pageSize.getWidth();
+      const alto = doc.internal.pageSize.getHeight();
+      if (y > alto - 28) {
+        doc.addPage();
+        y = 28;
+      }
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(12, y - 5, ancho - 24, 9, 2, 2, 'F');
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(titulo, 15, y + 1);
+      return y + 8;
+    }
+
+    function agregarTarjetaKpiPdf(doc, x, y, ancho, alto, titulo, valor, color = [29, 78, 216]) {
+      doc.setFillColor(...color);
+      doc.roundedRect(x, y, ancho, alto, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text(titulo, x + 4, y + 6);
+      doc.setFontSize(16);
+      doc.text(String(valor ?? '-'), x + 4, y + 15);
+    }
+
+    function agregarGraficaPdf(doc, imagenBase64, titulo, x, y, ancho, alto) {
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(x, y, ancho, alto, 3, 3, 'FD');
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(x, y, ancho, 9, 3, 3, 'F');
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text(titulo, x + 4, y + 6);
+      if (imagenBase64) {
+        doc.addImage(imagenBase64, 'PNG', x + 3, y + 11, ancho - 6, alto - 14, undefined, 'FAST');
+      }
+    }
+
+    async function generarImagenesGraficasPdf(filas) {
+      const configuracion = [
+        { titulo:'Registros por área', tipo:'bar', datos:ordenarConteo(contarPorCampo(filas, 'area')) },
+        { titulo:'Sin novedad / Con novedad', tipo:'doughnut', datos:ordenarConteo(contarPorCampo(filas, 'estadoOperativo')) },
+        { titulo:'Registros por colaborador', tipo:'bar', datos:ordenarConteo(contarPorCampo(filas, 'nombre'), 10), horizontal:true },
+        { titulo:'Tendencia por día', tipo:'line', datos:Object.entries(contarPorDia(filas)) },
+        { titulo:'Registros por punto', tipo:'bar', datos:ordenarConteo(contarPorCampo(filas, 'punto'), 20), horizontal:true }
+      ];
+
+      const imagenes = [];
+      for (const grafica of configuracion) {
+        const imagen = await crearImagenGraficaExcel(grafica.tipo, grafica.datos, {
+          horizontal: grafica.horizontal,
+          titulo: grafica.titulo
+        });
+        imagenes.push({ ...grafica, imagen });
+      }
+      return imagenes;
+    }
+
+    function agregarTablaDetalleRegistrosPdf(doc, filas, y, margen) {
+      y = agregarTituloSeccionPdf(doc, 'DETALLE COMPLETO DE REGISTROS', y);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Total de registros incluidos: ${filas.length}`, margen, y);
+      y += 4;
+
+      doc.autoTable({
+        startY: y,
+        head: [['Nombre', 'Área', 'Punto', 'Fecha', 'Hora', 'Estado operativo', 'Observación', 'Ubicación', 'Precisión']],
+        body: crearFilasDetallePdf(filas),
+        margin: { left:margen, right:margen, top:24, bottom:16 },
+        styles: { font:'helvetica', fontSize:5.8, cellPadding:1.2, overflow:'linebreak', valign:'top' },
+        headStyles: { fillColor:[22, 101, 52], textColor:[255,255,255], fontStyle:'bold', fontSize:6.2 },
+        alternateRowStyles: { fillColor:[248, 250, 252] },
+        columnStyles: {
+          0:{ cellWidth:28 },
+          1:{ cellWidth:20 },
+          2:{ cellWidth:34 },
+          3:{ cellWidth:17 },
+          4:{ cellWidth:16 },
+          5:{ cellWidth:24 },
+          6:{ cellWidth:63 },
+          7:{ cellWidth:45 },
+          8:{ cellWidth:14, halign:'right' }
+        },
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 5 && String(data.cell.raw).includes('Con novedad')) {
+            data.cell.styles.textColor = [185, 28, 28];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      });
+    }
+
+    async function generarDocumentoPdfRondas(filas, opciones = {}) {
+      const fechaDescarga = new Date().toLocaleString('es-GT');
+      const generadoPor = localStorage.getItem(SESSION_NOMBRE) || 'Monitoreo';
+      const pendientesLocales = leerPendientes().length;
+      const resumen = obtenerResumenEjecutivo(filas);
+      const actividadArea = obtenerActividadPorArea(filas);
+      const novedades = filas.filter(x => x.estadoOperativo === 'Con novedad');
+      const imagenesGraficas = await generarImagenesGraficasPdf(filas);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4', compress:true });
+      const ancho = doc.internal.pageSize.getWidth();
+      const margen = 12;
+      const esArea = opciones.tipo === 'area';
+      const areaTitulo = opciones.area || '';
+      const tituloPrincipal = esArea ? `REPORTE DE RONDAS - ÁREA: ${areaTitulo.toUpperCase()}` : 'REPORTE GENERAL DE RONDAS';
+      let y = 28;
+
+      doc.setFillColor(15, 23, 42);
+      doc.roundedRect(margen, y, ancho - (margen * 2), 36, 3, 3, 'F');
+      doc.setDrawColor(22, 163, 74);
+      doc.setLineWidth(1.2);
+      doc.line(margen + 8, y + 31, ancho - margen - 8, y + 31);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(19);
+      doc.text(tituloPrincipal, margen + 8, y + 13);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('Resumen ejecutivo, gráficas de control y detalle completo de registros.', margen + 8, y + 22);
+      doc.text(`Generado por: ${generadoPor}   |   Fecha: ${fechaDescarga}   |   Periodo: ${resumen.periodoCubierto}`, margen + 8, y + 28);
+
+      y += 47;
+      const tarjetaAncho = 42;
+      const tarjetaAlto = 20;
+      const espacio = 4;
+      const colores = {
+        azul:[29, 78, 216],
+        verde:[21, 128, 61],
+        rojo:[220, 38, 38],
+        amarillo:[180, 83, 9],
+        morado:[124, 58, 237],
+        celeste:[2, 132, 199]
+      };
+
+      agregarTarjetaKpiPdf(doc, margen, y, tarjetaAncho, tarjetaAlto, 'Total registros', resumen.totalRegistros, colores.azul);
+      agregarTarjetaKpiPdf(doc, margen + (tarjetaAncho + espacio), y, tarjetaAncho, tarjetaAlto, 'Áreas activas', resumen.totalAreas, colores.morado);
+      agregarTarjetaKpiPdf(doc, margen + (tarjetaAncho + espacio) * 2, y, tarjetaAncho, tarjetaAlto, 'Colaboradores', resumen.totalColaboradores, colores.celeste);
+      agregarTarjetaKpiPdf(doc, margen + (tarjetaAncho + espacio) * 3, y, tarjetaAncho, tarjetaAlto, 'Con novedad', resumen.totalConNovedad, resumen.totalConNovedad > 0 ? colores.rojo : colores.verde);
+      agregarTarjetaKpiPdf(doc, margen + (tarjetaAncho + espacio) * 4, y, tarjetaAncho, tarjetaAlto, 'Sin ubicación', resumen.totalSinUbicacion, resumen.totalSinUbicacion > 0 ? colores.amarillo : colores.verde);
+      agregarTarjetaKpiPdf(doc, margen + (tarjetaAncho + espacio) * 5, y, tarjetaAncho, tarjetaAlto, 'Promedio diario', resumen.promedioDiario, colores.verde);
+
+      y += 30;
+      y = agregarTituloSeccionPdf(doc, esArea ? `RESUMEN EJECUTIVO DEL ÁREA ${areaTitulo.toUpperCase()}` : 'RESUMEN EJECUTIVO GENERAL', y);
+      const resumenRows = [
+        ['Total de registros', resumen.totalRegistros, esArea ? `Cantidad total de rondas del área ${areaTitulo}.` : 'Cantidad total de rondas almacenadas en Firebase.'],
+        ['Áreas incluidas', resumen.totalAreas, esArea ? areaTitulo : 'Todas las áreas con registros.'],
+        ['Colaboradores', resumen.totalColaboradores, 'Colaboradores distintos que registraron rondas.'],
+        ['Puntos registrados', resumen.totalPuntos, 'Puntos QR distintos registrados.'],
+        ['Periodo cubierto', resumen.periodoCubierto, 'Rango de fechas detectado dentro de los registros descargados.'],
+        ['Promedio diario', resumen.promedioDiario, 'Promedio de registros por día con actividad.'],
+        ['Último registro', resumen.ultimoRegistro, 'Último punto registrado en la base.'],
+        ['Con novedad', resumen.totalConNovedad, 'Registros marcados con novedad operativa.'],
+        ['Sin novedad', resumen.totalSinNovedad, 'Registros sin novedad reportada.'],
+        ['Con ubicación', resumen.totalConUbicacion, 'Registros con enlace de ubicación GPS.'],
+        ['Sin ubicación', resumen.totalSinUbicacion, 'Registros sin enlace GPS disponible.'],
+        ['Pendientes locales', pendientesLocales, 'Registros guardados en el navegador pendientes de sincronización.']
+      ];
+
+      doc.autoTable({
+        startY: y,
+        head: [['Indicador', 'Resultado', 'Observación']],
+        body: resumenRows,
+        margin: { left:margen, right:margen, top:24, bottom:16 },
+        styles: { font:'helvetica', fontSize:7.5, cellPadding:2, overflow:'linebreak', valign:'middle' },
+        headStyles: { fillColor:[22, 101, 52], textColor:[255,255,255], fontStyle:'bold' },
+        alternateRowStyles: { fillColor:[248, 250, 252] },
+        columnStyles: { 0:{ cellWidth:45 }, 1:{ cellWidth:28, halign:'center' }, 2:{ cellWidth:190 } }
+      });
+
+      doc.addPage();
+      y = 28;
+      y = agregarTituloSeccionPdf(doc, 'DASHBOARD GRÁFICO', y);
+      agregarGraficaPdf(doc, imagenesGraficas[0]?.imagen, esArea ? 'Registros del área seleccionada' : 'Registros por área', margen, y, 132, 65);
+      agregarGraficaPdf(doc, imagenesGraficas[1]?.imagen, 'Sin novedad / Con novedad', 153, y, 132, 65);
+      y += 73;
+      agregarGraficaPdf(doc, imagenesGraficas[2]?.imagen, 'Registros por colaborador', margen, y, 132, 65);
+      agregarGraficaPdf(doc, imagenesGraficas[3]?.imagen, 'Tendencia por día', 153, y, 132, 65);
+
+      doc.addPage();
+      y = 28;
+      y = agregarTituloSeccionPdf(doc, 'REGISTROS POR PUNTO', y);
+      agregarGraficaPdf(doc, imagenesGraficas[4]?.imagen, 'Registros por punto', margen, y, ancho - (margen * 2), 98);
+
+      doc.addPage();
+      y = 28;
+      y = agregarTituloSeccionPdf(doc, esArea ? 'RESUMEN DEL ÁREA' : 'RESUMEN POR ÁREA', y);
+      doc.autoTable({
+        startY: y,
+        head: [['Área', 'Total registros', 'Puntos registrados', 'Colaboradores', 'Con novedad', 'Sin ubicación']],
+        body: actividadArea.length ? actividadArea.map(item => [item.area, item.total, item.puntos, item.colaboradores, item.conNovedad, item.sinUbicacion]) : [[areaTitulo || 'Sin actividad registrada', 0, 0, 0, 0, 0]],
+        margin: { left:margen, right:margen, top:24, bottom:16 },
+        styles: { font:'helvetica', fontSize:7.5, cellPadding:2, valign:'middle' },
+        headStyles: { fillColor:[15, 23, 42], textColor:[255,255,255], fontStyle:'bold' },
+        alternateRowStyles: { fillColor:[248, 250, 252] }
+      });
+
+      y = doc.lastAutoTable.finalY + 10;
+      y = agregarTituloSeccionPdf(doc, 'NOVEDADES REGISTRADAS', y);
+      doc.autoTable({
+        startY: y,
+        head: [['Fecha', 'Hora', 'Área', 'Colaborador', 'Punto', 'Observación']],
+        body: novedades.length ? novedades.map(fila => [fila.fecha, fila.hora, fila.area, fila.nombre, fila.nombrePunto, fila.observacion || 'Sin observación']) : [['Sin novedades registradas', '', '', '', '', '']],
+        margin: { left:margen, right:margen, top:24, bottom:16 },
+        styles: { font:'helvetica', fontSize:7, cellPadding:2, overflow:'linebreak', valign:'top' },
+        headStyles: { fillColor:[220, 38, 38], textColor:[255,255,255], fontStyle:'bold' },
+        alternateRowStyles: { fillColor:[254, 242, 242] },
+        columnStyles: { 0:{ cellWidth:22 }, 1:{ cellWidth:18 }, 2:{ cellWidth:30 }, 3:{ cellWidth:38 }, 4:{ cellWidth:45 }, 5:{ cellWidth:118 } }
+      });
+
+      doc.addPage();
+      y = 28;
+      agregarTablaDetalleRegistrosPdf(doc, filas, y, margen);
+
+      agregarEncabezadoPiePdf(doc, fechaDescarga, generadoPor, tituloPrincipal);
+      return doc;
+    }
+
+    async function descargarReportePdfProfesional() {
+      if (perfilActual?.rol !== 'admin') {
+        mostrarMensaje(mensajeGeneral, 'No tienes permiso para descargar el reporte PDF.', 'error');
+        return;
+      }
+
+      if (!window.jspdf?.jsPDF) {
+        mostrarMensaje(mensajeGeneral, 'No se pudo cargar jsPDF. Verifique la conexión a internet e intente nuevamente.', 'error');
+        return;
+      }
+
+      const botonOriginal = btnDescargarPdfPanel?.textContent;
+      if (btnDescargarPdfPanel) {
+        btnDescargarPdfPanel.disabled = true;
+        btnDescargarPdfPanel.textContent = 'Generando PDF general...';
+      }
+
+      try {
+        mostrarMensaje(mensajeGeneral, 'Generando PDF general con todas las áreas...', 'warn');
+        const filas = await cargarRegistrosFirebase();
+        actualizarSelectorAreaPdf(filas);
+        const doc = await generarDocumentoPdfRondas(filas, { tipo:'general' });
+        doc.save(`reporte_general_rondas_${new Date().toISOString().slice(0, 10)}.pdf`);
+        await registrarAuditoria('Descarga de reporte', `PDF general generado con ${filas.length} registro(s).`);
+        mostrarMensaje(mensajeGeneral, 'PDF general descargado correctamente con resumen, gráficas y registros agrupados por fecha.', 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeGeneral, `No se pudo generar el PDF general: ${e.message}`, 'error');
+      } finally {
+        if (btnDescargarPdfPanel) {
+          btnDescargarPdfPanel.disabled = false;
+          btnDescargarPdfPanel.textContent = botonOriginal || 'Descargar PDF general';
+        }
+      }
+    }
+
+    async function descargarReportePdfAreaProfesional() {
+      if (perfilActual?.rol !== 'admin') {
+        mostrarMensaje(mensajeGeneral, 'No tienes permiso para descargar el reporte PDF por área.', 'error');
+        return;
+      }
+
+      if (!window.jspdf?.jsPDF) {
+        mostrarMensaje(mensajeGeneral, 'No se pudo cargar jsPDF. Verifique la conexión a internet e intente nuevamente.', 'error');
+        return;
+      }
+
+      const areaSeleccionada = filtroAreaPdf?.value || '';
+      if (!areaSeleccionada) {
+        mostrarMensaje(mensajeGeneral, 'Seleccione un área para generar el PDF individual.', 'warn');
+        filtroAreaPdf?.focus();
+        return;
+      }
+
+      const botonOriginal = btnDescargarPdfAreaPanel?.textContent;
+      if (btnDescargarPdfAreaPanel) {
+        btnDescargarPdfAreaPanel.disabled = true;
+        btnDescargarPdfAreaPanel.textContent = 'Generando PDF por área...';
+      }
+
+      try {
+        mostrarMensaje(mensajeGeneral, `Generando PDF del área ${areaSeleccionada}...`, 'warn');
+        const todasLasFilas = await cargarRegistrosFirebase();
+        actualizarSelectorAreaPdf(todasLasFilas);
+        const filasArea = filtrarRegistrosPorArea(todasLasFilas, areaSeleccionada);
+
+        if (!filasArea.length) {
+          mostrarMensaje(mensajeGeneral, `El área ${areaSeleccionada} no tiene registros para descargar.`, 'warn');
+          return;
+        }
+
+        const doc = await generarDocumentoPdfRondas(filasArea, { tipo:'area', area:areaSeleccionada });
+        doc.save(`reporte_rondas_${normalizarNombreArchivo(areaSeleccionada)}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        await registrarAuditoria('Descarga de reporte', `PDF por área generado para ${areaSeleccionada} con ${filasArea.length} registro(s).`);
+        mostrarMensaje(mensajeGeneral, `PDF del área ${areaSeleccionada} descargado correctamente.`, 'ok');
+      } catch (e) {
+        console.error(e);
+        mostrarMensaje(mensajeGeneral, `No se pudo generar el PDF por área: ${e.message}`, 'error');
+      } finally {
+        if (btnDescargarPdfAreaPanel) {
+          btnDescargarPdfAreaPanel.disabled = false;
+          btnDescargarPdfAreaPanel.textContent = botonOriginal || 'Descargar PDF por área';
+        }
+      }
+    }
+
     async function eliminarRegistros() {
       if (perfilActual?.rol !== 'admin') {
         mostrarMensaje(mensajeGeneral, 'No tienes permiso para eliminar.', 'error');
@@ -3317,6 +3839,8 @@ ${valor}`;
       document.getElementById('btnSincronizar').addEventListener('click', () => sincronizarPendientes().catch(console.error));
       if (btnActualizarReporte) btnActualizarReporte.addEventListener('click', () => renderReporteAdministrativo().catch(console.error));
       if (btnDescargarExcelPanel) btnDescargarExcelPanel.addEventListener('click', descargarReporteExcelGraficas);
+      if (btnDescargarPdfPanel) btnDescargarPdfPanel.addEventListener('click', descargarReportePdfProfesional);
+      if (btnDescargarPdfAreaPanel) btnDescargarPdfAreaPanel.addEventListener('click', descargarReportePdfAreaProfesional);
       if (btnEliminarRegistros) btnEliminarRegistros.addEventListener('click', eliminarRegistros);
       if (estadoPuntoInput) estadoPuntoInput.addEventListener('change', actualizarEstadoObservacion);
       if (btnSinNovedad) btnSinNovedad.addEventListener('click', () => {
